@@ -9,40 +9,42 @@ function load()
  
    -- first line for ground
    punkte = {}
-   punkte[1] = {}
-   punkte[1].name = g1
-   punkte[1].x1 = 0
-   punkte[1].y1 = 0
-   punkte[1].x2 = 30
-   punkte[1].y2 = 30
-   
+   punkte[1] = {
+     name = g1,
+     x1 = 0,
+     y1 = 0,
+     x2 = 30,
+     y2 = 30,
+   }
+
    -- generate up to 500 lines for ground
    for p = 2,500 do
       punkte[p] = {}
 	  punkte[p].name = g1
-      punkte[p].x1 = punkte[p-1].x2+1
+      punkte[p].x1 = punkte[p-1].x2
       punkte[p].y1 = punkte[p-1].y2
-      punkte[p].x2 = punkte[p-1].x2+1 + math.random(50,200)
+      punkte[p].x2 = punkte[p-1].x2 + math.random(50,200)
       punkte[p].y2 = math.random(-100,100)
    end
    
    -- first line for top
    tpunkte = {}
-   tpunkte[1] = {}
-   tpunkte[1].name = g1
-   tpunkte[1].x1 = 0
-   tpunkte[1].y1 = 0
-   tpunkte[1].x2 = 30
-   tpunkte[1].y2 = 30  
+   tpunkte[1] = {
+     name = g1,
+     x1 = 0,
+     y1 = 0,
+     x2 = 30,
+     y2 = 30,
+   }
 
    -- generate up to 500 lines for top
    for p = 2,500 do
       tpunkte[p] = {}
 	  tpunkte[p].name = g1
-      tpunkte[p].x1 = tpunkte[p-1].x2+1
+      tpunkte[p].x1 = tpunkte[p-1].x2
       tpunkte[p].y1 = tpunkte[p-1].y2
-      tpunkte[p].x2 = tpunkte[p-1].x2+1 + math.random(50,200)
-      tpunkte[p].y2 = math.random(-100,100)
+      tpunkte[p].x2 = tpunkte[p-1].x2 + math.random(50,200)
+      tpunkte[p].y2 = math.random(-100, 100)
    end   
  
    -- create a world with size 
@@ -56,11 +58,26 @@ function load()
  
    -- create the ground and top shape, connection between the start and endpoint of each line and some thickness because polygons are needed 
    for i = 1,500 do
-      punkte[i].name = love.physics.newPolygonShape(ground, punkte[i].x1, punkte[i].y1, punkte[i].x1+1, punkte[i].y1+2, punkte[i].x2+3, punkte[i].y2+4, punkte[i].x2, punkte[i].y2)
+     print(i, "b", punkte[i].x1, punkte[i].y1, punkte[i].x2, punkte[i].y2)
+     punkte[i].name = love.physics.newPolygonShape(ground,
+       punkte[i].x1, 150,
+       punkte[i].x1, punkte[i].y1,
+       punkte[i].x2, punkte[i].y2,
+       punkte[i].x2, 150
+       )
+      --punkte[i].name = love.physics.newPolygonShape(ground, punkte[i].x1, punkte[i].y1, punkte[i].x1+1, punkte[i].y1+2, punkte[i].x2+3, punkte[i].y2+4, punkte[i].x2, punkte[i].y2)
    end 
    
    for i = 1,500 do
-      tpunkte[i].name = love.physics.newPolygonShape(top, tpunkte[i].x1, tpunkte[i].y1, tpunkte[i].x1+1, tpunkte[i].y1+2, tpunkte[i].x2+3, tpunkte[i].y2+4, tpunkte[i].x2, tpunkte[i].y2)
+     print(i, "t", tpunkte[i].x1, tpunkte[i].y1, tpunkte[i].x2, tpunkte[i].y2)
+     -- tpunkte[i].name = love.physics.newPolygonShape(top, tpunkte[i].x1, tpunkte[i].y1, tpunkte[i].x1+1, tpunkte[i].y1+2, tpunkte[i].x2+3, tpunkte[i].y2+4, tpunkte[i].x2, tpunkte[i].y2)
+     tpunkte[i].name = love.physics.newPolygonShape(top,
+       tpunkte[i].x1, -150,
+       tpunkte[i].x1, tpunkte[i].y1,
+       tpunkte[i].x2, tpunkte[i].y2,
+       tpunkte[i].x2, -150
+       )
+      --tpunkte[i] = punkte[i]
    end 
  
    -- create ship body at 400,200
@@ -92,7 +109,7 @@ function update(dt)
    
    if menu == 0 then
       if elapsed < 5 then
-	     text = "Start in " .. 5 - elapsed
+	     text = string.format("Start in %d", 6 - elapsed)
 	  end
       if elapsed > 5 and elapsed < 6 then
          start = 1
@@ -117,15 +134,15 @@ end
 function draw() 
 
    love.graphics.setFont(font12)
-   love.graphics.setColor(255, 255, 255)
+   love.graphics.setColor(180, 180, 180)
    
    -- draw the polygons with lines
    for i = 1,500 do   
-      love.graphics.polygon(love.draw_line, punkte[i].name:getPoints()) 
+      love.graphics.polygon(love.draw_fill, punkte[i].name:getPoints()) 
    end
    
    for i = 1,500 do   
-      love.graphics.polygon(love.draw_line, tpunkte[i].name:getPoints()) 
+      love.graphics.polygon(love.draw_fill, tpunkte[i].name:getPoints()) 
    end
  
    -- draw spaceship only if the game is not lost
@@ -133,6 +150,8 @@ function draw()
       love.graphics.polygon(love.draw_line, ship_shape:getPoints()) 
    end
    
+   love.graphics.setColor(255, 255, 255)
+
    -- draw text
    love.graphics.draw(text, 390, 300) 
    

@@ -2,47 +2,16 @@
 
 text = "START" 
 
+-- the level stream
+stream = nil
+-- stream "cache"
+items = {}
+-- debug = function(s) end
+debug = print
+
 function load() 
 	-- name of the game
 	love.graphics.setCaption("escape from generic death star")
-
-	-- first line for ground
-	punkte = {}
-	punkte[1] = {
-		x1 = 0,
-		y1 = 0,
-		x2 = 30,
-		y2 = 30,
-	}
-
-	-- generate up to 500 lines for ground
-	for p = 2,500 do
-		punkte[p] = {
-			x1 = punkte[p-1].x2,
-			y1 = punkte[p-1].y2,
-			x2 = punkte[p-1].x2 + math.random(50,200),
-			y2 = math.random(-100,100)
-		}
-	end
-	
-	-- first line for top
-	tpunkte = {}
-	tpunkte[1] = {
-		x1 = 0,
-		y1 = 0,
-		x2 = 30,
-		y2 = 30,
-	}
-
-	-- generate up to 500 lines for top
-	for p = 2,500 do
-		tpunkte[p] = {
-			x1 = tpunkte[p-1].x2,
-			y1 = tpunkte[p-1].y2,
-			x2 = tpunkte[p-1].x2 + math.random(50,200),
-			y2 = math.random(-100,100)
-		}
-	end
 
 	-- create a world with size 
 	world = love.physics.newWorld(200000, 2000) 
@@ -53,24 +22,7 @@ function load()
 	ground = love.physics.newBody(world, 0, 450, 0) 
 	top = love.physics.newBody(world, 0, 100, 0) 
 
-	-- create the ground and top shape, connection between the start and endpoint of each line and some thickness because polygons are needed 
-	for i = 1,500 do
-		punkte[i].shape = love.physics.newPolygonShape(ground,
-			punkte[i].x1, 150,
-			punkte[i].x1, punkte[i].y1,
-			punkte[i].x2, punkte[i].y2,
-			punkte[i].x2, 150
-		)
-	 end 
-	 
-	for i = 1,500 do
-		tpunkte[i].shape = love.physics.newPolygonShape(top,
-			tpunkte[i].x1, -150,
-			tpunkte[i].x1, tpunkte[i].y1,
-			tpunkte[i].x2, tpunkte[i].y2,
-			tpunkte[i].x2, -150
-		)
-	 end 
+	stream = dofile('random_world_stream.lua').create()
 
 	-- create ship body at 400,200
 	ship = love.physics.newBody(world, 400, 200) 
@@ -94,8 +46,28 @@ function load()
 	font20 = love.graphics.newFont(love.default_font, 20) 
 	
 end
- 
+
+gc_elapsed = 0.0
 function update(dt) 
+	gc_elapsed = gc_elapsed + dt
+	-- See if there are items that are already scrolled away
+	-- (check every 5 seconds)
+	if gc_elapsed >= 5.0 then
+		gc_elapsed = 0.0
+		to_delete = {}
+		for i, v in ipairs(items) do
+			if v.obsolete ~= nil and v:obsolete() then
+				table.insert(to_delete, i)
+			end
+		end
+		-- This is actual a 'reverse' operation
+		table.sort(to_delete, function(a,b) return a>b end)
+		for j, idx in ipairs(to_delete) do
+			table.remove(items, idx)
+		end
+		debug("shape items (after gc run):", #items)
+	end
+
 	-- update the world 
 	world:update(dt)  
 	 
@@ -116,9 +88,14 @@ function update(dt)
 			ground:setX(ground:getX() - dt * 100)
 			top:setX(top:getX() - dt * 100)
 			if up == 1 then 
-				 ship:applyImpulse(0, -500000 * dt)
+				ship:applyImpulse(0, -500000 * dt)
 			end
-	 end
+
+			if stream:max_x() < (-top:getX() + 1000) then
+				table.insert(items, stream:pop())
+				debug("shape items:", #items)
+			end
+	end
 end 
  
 function draw() 
@@ -126,12 +103,12 @@ function draw()
 	love.graphics.setColor(180, 180, 180)
 	 
 	-- draw the polygons with lines
-	for i = 1,500 do		
-		love.graphics.polygon(love.draw_fill, punkte[i].shape:getPoints()) 
-	end
-	
-	for i = 1,500 do		
-		love.graphics.polygon(love.draw_fill, tpunkte[i].shape:getPoints()) 
+	for i, v in ipairs(items) do
+		if v.border_shapes ~= nil then
+			for j, shape in ipairs(v.border_shapes) do
+				love.graphics.polygon(love.draw_fill, shape:getPoints())
+			end
+		end
 	end
  
 	-- draw spaceship only if the game is not lost

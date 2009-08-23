@@ -1,6 +1,7 @@
 -- vim: set noexpandtab:
 
 text = "START" 
+survived = 0.0
 
 -- the level stream
 stream = nil
@@ -75,9 +76,10 @@ function update(dt)
 			if elapsed < 5 then
 				text = string.format("Start in %d", 6 - elapsed)
 				elapsed = elapsed + dt
-			else
+			elseif start ~= 1 then
 				start = 1
 				world:setGravity(0, 100) 
+				survived = 0.0
 				ship:applyImpulse(0, 1)
 				elapsed = 7
 				text = ""
@@ -85,6 +87,7 @@ function update(dt)
 	 end
 	 
 	 if start == 1 then
+		 	survived = survived + dt
 			ground:setX(ground:getX() - dt * 100)
 			top:setX(top:getX() - dt * 100)
 			if up == 1 then 
@@ -120,7 +123,16 @@ function draw()
 
 	-- draw text
 	love.graphics.draw(text, 390, 300) 
+
+	love.graphics.setColor(128, 128, 128)
+
+	if survived > 0.0 then
+		text_survived = string.format("%06.0f seconds of awesome survival", survived)
+		love.graphics.draw(text_survived, 400, 30)
+	end
 	 
+
+	love.graphics.setColor(255, 255, 255)
 	-- draw menu
 	-- startmenu
 	if menu == 1 then

@@ -6,9 +6,11 @@ survived = 0.0
 -- the level stream
 stream = nil
 -- stream "cache"
-items = {}
+stream_items = {}
 -- debug = function(s) end
 debug = print
+font12 = nil
+font20 = nil
 
 function load() 
 	-- name of the game
@@ -41,7 +43,7 @@ function load()
 	elapsed = 0
 	start = 0
 	menu = 1
-	
+
 	-- define used fonts
 	font12 = love.graphics.newFont(love.default_font, 12) 
 	font20 = love.graphics.newFont(love.default_font, 20) 
@@ -51,12 +53,12 @@ end
 gc_elapsed = 0.0
 function update(dt) 
 	gc_elapsed = gc_elapsed + dt
-	-- See if there are items that are already scrolled away
+	-- See if there are stream_items that are already scrolled away
 	-- (check every 5 seconds)
 	if gc_elapsed >= 5.0 then
 		gc_elapsed = 0.0
 		to_delete = {}
-		for i, v in ipairs(items) do
+		for i, v in ipairs(stream_items) do
 			if v.obsolete ~= nil and v:obsolete() then
 				table.insert(to_delete, i)
 			end
@@ -64,14 +66,20 @@ function update(dt)
 		-- This is actual a 'reverse' operation
 		table.sort(to_delete, function(a,b) return a>b end)
 		for j, idx in ipairs(to_delete) do
-			table.remove(items, idx)
+			table.remove(stream_items, idx)
 		end
-		debug("shape items (after gc run):", #items)
+		debug("stream items after collection:", #stream_items)
+	end
+
+	for i, item in ipairs(stream_items) do
+		if item.update ~= nil then
+			item:update(dt)
+		end
 	end
 
 	-- update the world 
 	world:update(dt)  
-	 
+
 	 if menu == 0 then
 			if elapsed < 5 then
 				text = string.format("Start in %d", 6 - elapsed)
@@ -95,38 +103,40 @@ function update(dt)
 			end
 
 			if stream:max_x() < (-top:getX() + 1000) then
-				table.insert(items, stream:pop())
-				debug("shape items:", #items)
+				table.insert(stream_items, stream:pop())
+				debug("stream items:", #stream_items)
 			end
 	end
 end 
  
 function draw() 
+	love.graphics.setColor(255, 255, 255)
 	love.graphics.setFont(font12)
-	love.graphics.setColor(180, 180, 180)
-	 
+
 	-- draw the polygons with lines
-	for i, v in ipairs(items) do
-		if v.border_shapes ~= nil then
-			for j, shape in ipairs(v.border_shapes) do
-				love.graphics.polygon(love.draw_fill, shape:getPoints())
-			end
+	--debug("drawing stream items")
+	for i, v in ipairs(stream_items) do
+		--debug(v.draw)
+		if v.draw ~= nil then
+			v:draw()
 		end
 	end
+	--debug("done drawing stream items")
  
 	-- draw spaceship only if the game is not lost
 	if text ~= "GAME OVER" then
+		love.graphics.setColor(255, 255, 255)
 		love.graphics.polygon(love.draw_line, ship_shape:getPoints()) 
 	end
 	 
-	love.graphics.setColor(255, 255, 255)
 
 	-- draw text
+	love.graphics.setColor(255, 255, 255)
+	love.graphics.setFont(font12)
 	love.graphics.draw(text, 390, 300) 
 
-	love.graphics.setColor(128, 128, 128)
-
 	if survived > 0.0 then
+		love.graphics.setColor(128, 128, 128)
 		text_survived = string.format("%06.0f seconds of awesome survival", survived)
 		love.graphics.draw(text_survived, 400, 30)
 	end

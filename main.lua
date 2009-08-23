@@ -1,3 +1,5 @@
+-- Droggelbecher testet mal, ob er hier direkt was editieren kann ^^
+
 text = "START" 
  
 function load() 
@@ -150,8 +152,8 @@ function draw()
       love.graphics.rectangle(0, 100, 100, 600, 400)
       love.graphics.setColor(255, 255, 255)
       love.graphics.setFont(font20)
-      love.graphics.draw("Das übliche...\nAlso BÄM BÄM BÄM", 340, 180)
-	  menuitem(3, "ZURÜCK")
+      love.graphics.draw("Das ï¿½bliche...\nAlso Bï¿½M Bï¿½M Bï¿½M", 340, 180)
+	  menuitem(3, "ZURï¿½CK")
    end
    -- credits menu
    if menu == 3 then
@@ -160,7 +162,7 @@ function draw()
       love.graphics.setColor(255, 255, 255)
       love.graphics.setFont(font20)
       love.graphics.draw("Real Entertainment Unified Developing Enterprise", 150, 180)
-	  menuitem(3, "ZURÜCK")
+	  menuitem(3, "ZURï¿½CK")
    end  
    -- exit programm
    if menu == 4 then

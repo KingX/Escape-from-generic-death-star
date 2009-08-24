@@ -150,6 +150,13 @@ function draw()
 		love.graphics.setColor(255, 255, 255)
 		love.graphics.polygon(love.draw_line, ship_shape:getPoints()) 
 	end
+	
+	-- reset button for testing
+	
+	love.graphics.setColor(255, 0, 0)
+	love.graphics.rectangle(0, 750, 550, 40, 20)
+	love.graphics.setColor(0, 0, 255)
+	love.graphics.draw("RESET", 752, 565)
 	 
 
 	-- draw text
@@ -237,6 +244,18 @@ function mousepressed(x, y, button)
 	menubutton(3, 1, 4, x, y)
 	menubutton(3, 2, 1, x, y)
 	menubutton(3, 3, 1, x, y)
+	-- resetbutton
+	if x > 750 and y > 550 and x < 790 and y < 570 then
+		ship:setY(200)
+		ship:setX(400)
+		ship:setAngle(0)
+		ship:setSpin(0)
+		ship:setVelocity(0,0)
+		start = 0
+		elapsed = 0
+		world:setGravity(0, 0)
+		-- and more...
+	end
 end
 
 function mousereleased(x, y, button)

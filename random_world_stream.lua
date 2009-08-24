@@ -1,3 +1,4 @@
+-- vim: set noexpandtab:
 
 function _create_item(effect)
 	y = math.random(200, 400)
@@ -16,10 +17,9 @@ function _create_item(effect)
 				love.graphics.setColor(self.color[1], self.color[2], self.color[3])
 				love.graphics.polygon(love.draw_fill, self.shape:getPoints())
 			end,
-		x = x,
 		update = function(self, dt)
 				for i = 1,3 do
-					r = math.random(-2, 2)
+					r = math.random(-10, 10)
 					if self.color[i] >= 245 then
 						r = -math.abs(r)
 					elseif self.color[i] <= 20 then
@@ -30,10 +30,11 @@ function _create_item(effect)
 			end,
 		collision = effect,
 		obsolete = function(self)
-				return self.body:getX() < -100
-			end
+				return self.body:getX() < -100 or self.body:getY() > 700
+			end,
+		collision_type = 'item'
 	}
-	debug("item created")
+  shape:setData(r)
 	return r
 end
 
@@ -57,33 +58,34 @@ function _create_border_piece(stream, side, oldpos)
 
 	stream[side] = newpos
 
-	return {
+	r = {
+		collision_type = 'border',
 		shape = shape,
 		draw = function(self)
 				love.graphics.setColor(180, 180, 180)
-				love.graphics.polygon(love.draw_line, self.shape:getPoints())
+				love.graphics.polygon(love.draw_fill, self.shape:getPoints())
 			end,
 		rightmost_x = newpos.x,
 		obsolete = function(self)
 				return self.rightmost_x < -top:getX()
 			end
 	}
+  shape:setData(r)
+  return r
 end
 
-need_item = true
 function pop(stream)
-
 	x = math.random(0, 100)
 
-	if x < 10 and need_item then
-		debug("[!!!] creating item")
+	if x < 10 then
+		debug("item creation")
 		effect = function(self)
+			print("Controls inverted!")
 			invert_controls = true
 		end
 		r = _create_item(effect)
-
+		debug("item created")
 	else
-		--debug("creating border piece")
 		if stream.top.x > stream.bottom.x then side = 'bottom'
 		else side = 'top' end
 		r = _create_border_piece(stream, side, stream[side])

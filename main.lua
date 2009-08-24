@@ -254,6 +254,16 @@ function mousepressed(x, y, button)
 		start = 0
 		elapsed = 0
 		world:setGravity(0, 0)
+		stream_items = {}
+		stream.top.x = 0
+		stream.top.y = 0
+		stream.bottom.x = 0
+		stream.bottom.y = 0
+		speed = 100.0
+		effect_off = nil
+		effect_timeout = 0.0
+		effect_message = nil
+		invert_controls = false
 		-- and more...
 	end
 end

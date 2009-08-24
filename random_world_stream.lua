@@ -1,6 +1,6 @@
 -- vim: set noexpandtab:
 
-function _create_item(effect)
+function _create_item(message, effect_on, effect_off)
 	y = math.random(200, 400)
 	x = 760
 	body = love.physics.newBody(world, x, y, 0.01)
@@ -8,7 +8,7 @@ function _create_item(effect)
 		0, -20, 20, 0, 0, 20, -20, 0
 		)
 	body:applyImpulse(-20, -10)
-	body:setSpin(90)
+	body:setSpin(180)
 	r = {
 		shape = shape,
 		body = body,
@@ -28,7 +28,10 @@ function _create_item(effect)
 					self.color[i] = self.color[i] + r
 				end
 			end,
-		collision = effect,
+		effect_message = message,
+		effect_on = effect_on,
+		effect_off = offect_off,
+		effect_timeout = 10.0,
 		obsolete = function(self)
 				return self.body:getX() < -100 or self.body:getY() > 700
 			end,
@@ -77,14 +80,23 @@ end
 function pop(stream)
 	x = math.random(0, 100)
 
-	if x < 10 then
-		debug("item creation")
-		effect = function(self)
-			print("Controls inverted!")
+	if x < 3 then
+		effect_on = function(self)
 			invert_controls = true
 		end
-		r = _create_item(effect)
-		debug("item created")
+		effect_off = function()
+			debug("de-inverting controls")
+			invert_controls = false
+			debug("done de-inverting controls")
+		end
+		r = _create_item("BÄM CONTROLS INVERTED", effect_on, effect_off)
+	elseif x < 7 then
+		debug("speedup item")
+		effect_on = function(self)
+			speed = 170
+		end
+		effect_off = function() speed = 100 end
+		r = _create_item("SPEED BLAST", effect_on, effect_off)
 	else
 		if stream.top.x > stream.bottom.x then side = 'bottom'
 		else side = 'top' end

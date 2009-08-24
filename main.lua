@@ -2,6 +2,10 @@
 
 text = "START" 
 survived = 0.0
+speed = 100.0
+effect_off = nil
+effect_timeout = 0.0
+effect_message = nil
 
 -- the level stream
 stream = nil
@@ -86,6 +90,17 @@ function update(dt)
 		end
 	end
 
+	debug("effect timeout:", effect_timeout, "effect_off:", effect_off)
+	if effect_off ~= nil then
+		if effect_timeout > 0 then
+			effect_timeout = effect_timeout - dt
+		else
+			debug("turning effect off")
+			effect_off()
+			effect_off = nil
+		end
+	end
+
 	-- update the world 
 	world:update(dt)  
 
@@ -105,8 +120,8 @@ function update(dt)
 	 
 	 if start == 1 then
 		 	survived = survived + dt
-			ground:setX(ground:getX() - dt * 100)
-			top:setX(top:getX() - dt * 100)
+			ground:setX(ground:getX() - dt * speed)
+			top:setX(top:getX() - dt * speed)
 			if up then 
 				ship:applyImpulse(0, -500000 * dt)
 			end
@@ -141,7 +156,19 @@ function draw()
 	love.graphics.setColor(255, 255, 255)
 	love.graphics.setFont(font12)
 	love.graphics.draw(text, 390, 300) 
+	if effect_timeout > 0 and effect_off ~= nil then
+		love.graphics.setFont(font20)
+		love.graphics.setColor(255, 40, 30)
+		if effect_timeout < 1 then
+			love.graphics.setColor(
+				255 * effect_timeout,
+				40 * effect_timeout,
+				30 * effect_timeout)
+		end
+		love.graphics.draw(string.format("%04.2f %s",effect_timeout, effect_message), 30, 30)
+	end
 
+	love.graphics.setFont(font12)
 	if survived > 0.0 then
 		love.graphics.setColor(128, 128, 128)
 		text_survived = string.format("%06.0f seconds of awesome survival", survived)
@@ -238,12 +265,30 @@ function collision(a, b, c)
 		text = "GAME OVER"
 		menu = 1
 		start = 0
-	elseif c_ship and c_item then -- ship+item = ask item
 
-		--[[ WELCOME TO SEGFAULT DREAMS ]]--
+	elseif c_ship and c_item then -- ship+item = ask item what to do
 
-		item:collision()
+		--[[ WELCOME TO SEGFAULT AREA ]]--
 
+		if effect_off ~= nil then
+			effect_off()
+		end
+
+		debug("setting up effect....")
+		effect_timeout = item.effect_timeout
+		effect_message = item.effect_message
+		effect_off = item.effect_off
+		item:effect_on()
+		debug("done.")
+
+		-- stabilize ship
+		ship:setSpin(0)
+		ship:setVelocity(0, 0)
+		ship:setAngle(0)
+	end
+
+	-- If item was involved in a collision, destroy it
+	if c_item then
 		-- remove item
 		item.body:destroy()
 		item.shape:destroy()
@@ -253,16 +298,6 @@ function collision(a, b, c)
 				break
 			end
 		end
-		-- stabilize ship
-		--[[
-		print("a")
-		ship:setSpin(0)
-		print("b")
-		ship:setVelocity(0, 0)
-		print("c")
-		ship:setAngle(0, 0)
-		print("d")
-		]]--
 	end
 
 end

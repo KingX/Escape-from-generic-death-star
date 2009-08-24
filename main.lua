@@ -220,6 +220,13 @@ function mousepressed(x, y, button)
 	-- resetbutton
 	if x > 750 and y > 550 and x < 790 and y < 570 then
 		ship:setY(200)
+		ship:setX(400)
+		ship:setAngle(0)
+		ship:setSpin(0)
+		ship:setVelocity(0,0)
+		start = 0
+		elapsed = 0
+		world:setGravity(0, 0)
 		-- and more...
 	end
 end

@@ -1,6 +1,9 @@
 -- vim: set noexpandtab:
 
 function _create_item(message, effect_on, effect_off, timeout)
+	if timeout == nil then
+		print("========= WTF TIMEOUT NIL msg=", message)
+	end
 	local y = math.random(200, 400)
 	local x = 760
 	local body = love.physics.newBody(world, x, y, 0.01)
@@ -33,11 +36,11 @@ function _create_item(message, effect_on, effect_off, timeout)
 		effect_off = effect_off,
 		effect_timeout = timeout,
 		obsolete = function(self)
-				return self.body:getX() < -100 or self.body:getY() > 700
+				return (self.body:getX() < -100) or (self.body:getY() > 700)
 			end,
 		collision_type = 'item'
 	}
-  shape:setData(r)
+	shape:setData(r)
 	return r
 end
 
@@ -81,7 +84,8 @@ end
 function pop(stream)
 	local r = nil
 	local item_chance = 10 -- of 100
-	local msg, on, off, timeout = 10
+	local msg, on, off
+	local timeout = 10
 
 	if math.random(0, 100) <= item_chance then
 		local x = math.random(0, 100)
@@ -96,11 +100,29 @@ function pop(stream)
 			on = function(self) speed = 200 end
 			off = function() speed = 100 end
 
+		elseif x < 30 then
+			msg = "BIG BLAST"
+			on = function(self)
+				ship_shape:destroy()
+				ship_shape = love.physics.newPolygonShape(ship, 0, 0, 100, 30, 0, 60)
+				ship_shape:setData({collision_type = 'ship'})
+			end
+			off = function()
+				ship_shape:destroy()
+				ship_shape = love.physics.newPolygonShape(ship, 0, 0, 50, 15, 0, 30)
+				ship_shape:setData({collision_type = 'ship'})
+			end
+
 		else
 			msg = "CA$H"
-			timeout = 1.0
-			on = function(self) score = score + 10000 end
-			off = function() end
+			timeout = 3.0
+			on = function(self)
+				score_multiplier = 5
+			end
+			off = function()
+				score = score + 10000
+				score_multiplier = 1
+			end
 
 		end
 		r = _create_item(msg, on, off, timeout)

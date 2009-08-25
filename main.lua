@@ -11,11 +11,15 @@ effect_message = nil
 stream = nil
 -- stream "cache"
 stream_items = {}
--- debug = function(s) end
-debug = print
+--debug = function() end
+debug = function(...)
+	print(...)
+	io.flush()
+end
 font12 = nil
 font20 = nil
 score = 0
+score_multiplier = 1
 
 function init_ship()
 	-- create ship body at 400,200
@@ -65,55 +69,48 @@ end
 
 gc_elapsed = 0.0
 function update(dt) 
-	debug("<update>")
-	gc_elapsed = gc_elapsed + dt
 	-- See if there are stream_items that are already scrolled away
 	-- (check every 5 seconds)
+	gc_elapsed = gc_elapsed + dt
 	if gc_elapsed >= 5.0 then
 		gc_elapsed = 0.0
-		to_delete = {}
+		local to_delete = {}
 		for i, v in ipairs(stream_items) do
-			if v.obsolete ~= nil and v:obsolete() then
+			if v == nil or (v.obsolete ~= nil and v:obsolete()) then
 				table.insert(to_delete, i)
 			end
 		end
-		-- This is actual a 'reverse' operation
+		-- This is actually a 'reverse' operation
 		table.sort(to_delete, function(a,b) return a>b end)
 		for j, idx in ipairs(to_delete) do
+			stream_items[idx].shape:setData(nil)	
 			stream_items[idx].shape:destroy()	
 			table.remove(stream_items, idx)
 		end
-		--debug("stream items after collection:", #stream_items)
 	end
 
-	debug("updating items")
-
+	-- Call update callbacks for items that have one
 	for i, item in ipairs(stream_items) do
-		if item.update ~= nil then
+		if item ~= nil and item.update ~= nil then
 			item:update(dt)
 		end
 	end
 
-	debug("<update world>")
 	-- update the world 
 	world:update(dt)  
-	debug("</update world>")
 
+	-- Decrease effect time or turn effect off when its over
 	if effect_off ~= nil then
-		debug("effect_off=", effect_off)
+		--debug("effect_off=", effect_off, "effect_timeout=", effect_timeout)
 		if effect_timeout > 0 then
-			debug("not yet timed out")
 			effect_timeout = effect_timeout - dt
 		else
-			debug("turning effect off")
 			effect_off()
 			effect_off = nil
-			debug("done.")
 		end
 	end
-	debug("(a)")
 
-	 if menu == 0 then
+	if menu == 0 then
 			if elapsed < 5 then
 				text = string.format("Start in %d", 6 - elapsed)
 				elapsed = elapsed + dt
@@ -126,13 +123,12 @@ function update(dt)
 				elapsed = 7
 				text = ""
 			end
-	 end
-	debug("(b)")
+	end
 
 	 
 	 if start == 1 then
 		 	survived = survived + dt
-			score = score + 100 * dt
+			score = score + 100 * dt * score_multiplier
 			ground:setX(ground:getX() - dt * speed)
 			top:setX(top:getX() - dt * speed)
 			if up then 
@@ -144,21 +140,18 @@ function update(dt)
 				--debug("stream items:", #stream_items)
 			end
 	end
-	debug("</update>")
 end 
  
 function draw() 
-	debug("<draw>")
 	love.graphics.setColor(255, 255, 255)
 	love.graphics.setFont(font12)
 
 	-- draw the polygons with lines
 	for i, v in ipairs(stream_items) do
-		if v.draw ~= nil then
+		if v ~= nil and v.draw ~= nil then
 			v:draw()
 		end
 	end
-	debug("done drawing stream items")
  
 	-- draw spaceship only if the game is not lost
 	if text ~= "GAME OVER" then
@@ -172,7 +165,6 @@ function draw()
 	love.graphics.rectangle(0, 750, 550, 40, 20)
 	love.graphics.setColor(0, 0, 255)
 	love.graphics.draw("RESET", 752, 565)
-	debug("draw (a)")
 
 	-- draw text
 	love.graphics.setColor(255, 255, 255)
@@ -201,8 +193,6 @@ function draw()
 	local text_score = string.format("SCORE: %010d", score)
 	love.graphics.draw(text_score, 500, 45)
 	
-	debug("draw (b)")
-
 	love.graphics.setColor(255, 255, 255)
 	-- draw menu
 	-- startmenu
@@ -236,7 +226,6 @@ function draw()
 	if menu == 4 then
 		os.exit()
 	end	 
-	debug("</draw>")
 end 
 
 function menuitem(position, caption)
@@ -332,40 +321,28 @@ function collision(a, b, c)
 		effect_message = item.effect_message
 		effect_off = item.effect_off
 		item:effect_on()
-		debug("done.")
 
 		-- stabilize ship
-		debug("stabilizing ship")
 		ship:setSpin(0)
 		ship:setVelocity(0, 0)
 		ship:setAngle(0)
-		debug("done.")
 	end
 
 	-- If item was involved in a collision, destroy it
 	if c_item then
-		-- remove item;
-		debug("destroying item:", item.effect_message)
-		debug("calling shape:destroy()")
+		-- make shape non-colliding until garbage collecter munches it
+		item.shape:setMaskBits(0)
 		item.shape:setData(nil)
-		item.shape:destroy()
-		debug("calling body:destroy()")
-		item.body:destroy()
-		debug("deleting from stream_items")
-		local to_delete = nil
-		for i, it in ipairs(stream_items) do
-			if it == item then
-				print("found to-delete item at", i)
-				to_delete = i
+		for j, it in ipairs(stream_items) do
+			if it ~= nil and it == item then
+				table.remove(stream_items, j)
 				break
 			end
 		end
-		if to_delete ~= nil then
-			table[to_delete] = nil
-			table.remove(stream_items, to_delete)
-		end
-		debug("item deleted")
+		-- om nom nom nom
+		debug("body count before gc:", world:getBodyCount())
+		collectgarbage()
+		debug("body count after gc:", world:getBodyCount())
 	end
-	debug("</collision>")
 
 end

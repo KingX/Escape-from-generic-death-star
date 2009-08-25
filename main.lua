@@ -37,6 +37,8 @@ end
 	
 
 function load() 
+	math.randomseed(os.time())
+
 	-- name of the game
 	love.graphics.setCaption("escape from generic death star")
 

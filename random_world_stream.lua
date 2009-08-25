@@ -1,10 +1,10 @@
 -- vim: set noexpandtab:
 
-function _create_item(message, effect_on, effect_off)
-	y = math.random(200, 400)
-	x = 760
-	body = love.physics.newBody(world, x, y, 0.01)
-	shape = love.physics.newPolygonShape(body,
+function _create_item(message, effect_on, effect_off, timeout)
+	local y = math.random(200, 400)
+	local x = 760
+	local body = love.physics.newBody(world, x, y, 0.01)
+	local shape = love.physics.newPolygonShape(body,
 		0, -20, 20, 0, 0, 20, -20, 0
 		)
 	body:applyImpulse(-20, -10)
@@ -30,8 +30,8 @@ function _create_item(message, effect_on, effect_off)
 			end,
 		effect_message = message,
 		effect_on = effect_on,
-		effect_off = offect_off,
-		effect_timeout = 10.0,
+		effect_off = effect_off,
+		effect_timeout = timeout,
 		obsolete = function(self)
 				return self.body:getX() < -100 or self.body:getY() > 700
 			end,
@@ -42,6 +42,7 @@ function _create_item(message, effect_on, effect_off)
 end
 
 function _create_border_piece(stream, side, oldpos)
+	local newpos, base, y0
 	if side == 'top' then
 		newpos = { x=oldpos.x + math.random(50, 200), y=math.random(-100, 100) }
 		base = top
@@ -52,7 +53,7 @@ function _create_border_piece(stream, side, oldpos)
 		y0 = 150
 	end
 
-	shape = love.physics.newPolygonShape(base,
+	local shape = love.physics.newPolygonShape(base,
 		oldpos.x, y0,
 		oldpos.x, oldpos.y,
 		newpos.x, newpos.y,
@@ -61,7 +62,7 @@ function _create_border_piece(stream, side, oldpos)
 
 	stream[side] = newpos
 
-	r = {
+	local r = {
 		collision_type = 'border',
 		shape = shape,
 		draw = function(self)
@@ -78,25 +79,32 @@ function _create_border_piece(stream, side, oldpos)
 end
 
 function pop(stream)
-	x = math.random(0, 100)
+	local r = nil
+	local item_chance = 10 -- of 100
+	local msg, on, off, timeout = 10
 
-	if x < 3 then
-		effect_on = function(self)
-			invert_controls = true
+	if math.random(0, 100) <= item_chance then
+		local x = math.random(0, 100)
+
+		if x < 10 then
+			msg = "ZACK! Control inversion"
+			on = function(self) invert_controls = true end
+			off = function() invert_controls = false end
+
+		elseif x < 20 then
+			msg = "SPEED BLAST"
+			on = function(self) speed = 200 end
+			off = function() speed = 100 end
+
+		else
+			msg = "CA$H"
+			timeout = 1.0
+			on = function(self) score = score + 10000 end
+			off = function() end
+
 		end
-		effect_off = function()
-			debug("de-inverting controls")
-			invert_controls = false
-			debug("done de-inverting controls")
-		end
-		r = _create_item("BÄM CONTROLS INVERTED", effect_on, effect_off)
-	elseif x < 7 then
-		debug("speedup item")
-		effect_on = function(self)
-			speed = 170
-		end
-		effect_off = function() speed = 100 end
-		r = _create_item("SPEED BLAST", effect_on, effect_off)
+		r = _create_item(msg, on, off, timeout)
+
 	else
 		if stream.top.x > stream.bottom.x then side = 'bottom'
 		else side = 'top' end

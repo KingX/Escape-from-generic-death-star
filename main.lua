@@ -15,6 +15,7 @@ stream_items = {}
 debug = print
 font12 = nil
 font20 = nil
+score = 0
 
 function init_ship()
 	-- create ship body at 400,200
@@ -64,6 +65,7 @@ end
 
 gc_elapsed = 0.0
 function update(dt) 
+	debug("<update>")
 	gc_elapsed = gc_elapsed + dt
 	-- See if there are stream_items that are already scrolled away
 	-- (check every 5 seconds)
@@ -84,25 +86,32 @@ function update(dt)
 		--debug("stream items after collection:", #stream_items)
 	end
 
+	debug("updating items")
+
 	for i, item in ipairs(stream_items) do
 		if item.update ~= nil then
 			item:update(dt)
 		end
 	end
 
-	debug("effect timeout:", effect_timeout, "effect_off:", effect_off)
+	debug("<update world>")
+	-- update the world 
+	world:update(dt)  
+	debug("</update world>")
+
 	if effect_off ~= nil then
+		debug("effect_off=", effect_off)
 		if effect_timeout > 0 then
+			debug("not yet timed out")
 			effect_timeout = effect_timeout - dt
 		else
 			debug("turning effect off")
 			effect_off()
 			effect_off = nil
+			debug("done.")
 		end
 	end
-
-	-- update the world 
-	world:update(dt)  
+	debug("(a)")
 
 	 if menu == 0 then
 			if elapsed < 5 then
@@ -112,14 +121,18 @@ function update(dt)
 				start = 1
 				world:setGravity(0, 100) 
 				survived = 0.0
+				score = 0
 				ship:applyImpulse(0, 1)
 				elapsed = 7
 				text = ""
 			end
 	 end
+	debug("(b)")
+
 	 
 	 if start == 1 then
 		 	survived = survived + dt
+			score = score + 100 * dt
 			ground:setX(ground:getX() - dt * speed)
 			top:setX(top:getX() - dt * speed)
 			if up then 
@@ -131,9 +144,11 @@ function update(dt)
 				--debug("stream items:", #stream_items)
 			end
 	end
+	debug("</update>")
 end 
  
 function draw() 
+	debug("<draw>")
 	love.graphics.setColor(255, 255, 255)
 	love.graphics.setFont(font12)
 
@@ -143,7 +158,7 @@ function draw()
 			v:draw()
 		end
 	end
-	--debug("done drawing stream items")
+	debug("done drawing stream items")
  
 	-- draw spaceship only if the game is not lost
 	if text ~= "GAME OVER" then
@@ -157,31 +172,36 @@ function draw()
 	love.graphics.rectangle(0, 750, 550, 40, 20)
 	love.graphics.setColor(0, 0, 255)
 	love.graphics.draw("RESET", 752, 565)
-	 
+	debug("draw (a)")
 
 	-- draw text
 	love.graphics.setColor(255, 255, 255)
 	love.graphics.setFont(font12)
 	love.graphics.draw(text, 390, 300) 
-	if effect_timeout > 0 and effect_off ~= nil then
+	if start == 1 and effect_timeout > 0 then
 		love.graphics.setFont(font20)
 		love.graphics.setColor(255, 40, 30)
+		local x = 30
 		if effect_timeout < 1 then
+			x = (30 - 400) + 400 * effect_timeout
 			love.graphics.setColor(
 				255 * effect_timeout,
 				40 * effect_timeout,
 				30 * effect_timeout)
 		end
-		love.graphics.draw(string.format("%04.2f %s",effect_timeout, effect_message), 30, 30)
+		love.graphics.draw(string.format("%04.2f %s",effect_timeout, effect_message), x, 30)
 	end
 
 	love.graphics.setFont(font12)
-	if survived > 0.0 then
-		love.graphics.setColor(128, 128, 128)
-		text_survived = string.format("%06.0f seconds of awesome survival", survived)
-		love.graphics.draw(text_survived, 400, 30)
-	end
-	 
+	-- Intentionally draw these always so user can see its latest score in menu
+	love.graphics.setColor(128, 128, 128)
+	local text_survived = string.format("%06.0f seconds of survival", survived)
+	love.graphics.draw(text_survived, 500, 30)
+
+	local text_score = string.format("SCORE: %010d", score)
+	love.graphics.draw(text_score, 500, 45)
+	
+	debug("draw (b)")
 
 	love.graphics.setColor(255, 255, 255)
 	-- draw menu
@@ -216,6 +236,7 @@ function draw()
 	if menu == 4 then
 		os.exit()
 	end	 
+	debug("</draw>")
 end 
 
 function menuitem(position, caption)
@@ -270,6 +291,8 @@ function collision(a, b, c)
 	local item = nil
 	for i, obj in ipairs({a, b}) do
 		if obj ~= nil and obj.collision_type ~= nil then
+		--debug("---")
+		--table.foreach(stream_items, print)
 			if obj.collision_type == 'border' then c_border = true end
 			if obj.collision_type == 'ship' then c_ship = true end
 			if obj.collision_type == 'item' then
@@ -291,9 +314,10 @@ function collision(a, b, c)
 
 		if effect_off ~= nil then
 			effect_off()
+			effect_off = nil
 		end
 
-		debug("setting up effect....")
+		debug("setting up effect:", item.effect_message)
 		effect_timeout = item.effect_timeout
 		effect_message = item.effect_message
 		effect_off = item.effect_off
@@ -301,22 +325,37 @@ function collision(a, b, c)
 		debug("done.")
 
 		-- stabilize ship
+		debug("stabilizing ship")
 		ship:setSpin(0)
 		ship:setVelocity(0, 0)
 		ship:setAngle(0)
+		debug("done.")
 	end
 
 	-- If item was involved in a collision, destroy it
 	if c_item then
-		-- remove item
-		item.body:destroy()
+		-- remove item;
+		debug("destroying item:", item.effect_message)
+		debug("calling shape:destroy()")
+		item.shape:setData(nil)
 		item.shape:destroy()
+		debug("calling body:destroy()")
+		item.body:destroy()
+		debug("deleting from stream_items")
+		local to_delete = nil
 		for i, it in ipairs(stream_items) do
 			if it == item then
-				table.remove(stream_items, i)
+				print("found to-delete item at", i)
+				to_delete = i
 				break
 			end
 		end
+		if to_delete ~= nil then
+			table[to_delete] = nil
+			table.remove(stream_items, to_delete)
+		end
+		debug("item deleted")
 	end
+	debug("</collision>")
 
 end

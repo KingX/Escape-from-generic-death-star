@@ -2,10 +2,6 @@
 
 text = "START" 
 survived = 0.0
-speed = 100.0
-effect_off = nil
-effect_timeout = 0.0
-effect_message = nil
 
 -- the level stream
 stream = nil
@@ -19,7 +15,14 @@ end
 font12 = nil
 font20 = nil
 score = 0
-score_multiplier = 1
+
+effect_state = {
+	score_multiplier = 1,
+	inverted_controls = false,
+	ship_size = 1,
+	speed = 100,
+	running_effects = {}
+}
 
 function init_ship()
 	-- create ship body at 400,200
@@ -101,16 +104,26 @@ function update(dt)
 	-- update the world 
 	world:update(dt)  
 
+	-------[[ handle effects ]]-------
+
 	-- Decrease effect time or turn effect off when its over
-	if effect_off ~= nil then
-		--debug("effect_off=", effect_off, "effect_timeout=", effect_timeout)
-		if effect_timeout > 0 then
-			effect_timeout = effect_timeout - dt
+	for i, effect in ipairs(effect_state.running_effects) do
+		if effect.timeout > 0 then
+			effect.timeout = effect.timeout - dt
 		else
-			effect_off()
-			effect_off = nil
+			effect.off()
+			-- We're currently iterating, set the to-delete effect to nil
+			effect_state.running_effects[i] = nil
 		end
 	end
+	-- clean up nil effects
+	for i=#effect_state.running_effects,1,-1 do
+		if effect_state.running_effects[i] == nil then
+			table.remove(effect_state.running_effects, i)
+		end
+	end
+
+	---------[[ handle menu stuff ]]-------
 
 	if menu == 0 then
 			if elapsed < 1 then
@@ -127,19 +140,19 @@ function update(dt)
 			end
 	end
 
-	 
-	 if start == 1 then
+	---------[[ score and ground movement ]]-------
+
+	if start == 1 then
 		 	survived = survived + dt
-			score = score + 100 * dt * score_multiplier
-			ground:setX(ground:getX() - dt * speed)
-			top:setX(top:getX() - dt * speed)
+			score = score + 100 * dt * effect_state.score_multiplier
+			ground:setX(ground:getX() - dt * effect_state.speed)
+			top:setX(top:getX() - dt * effect_state.speed)
 			if up then 
 				ship:applyImpulse(0, -500000 * dt)
 			end
 
 			if stream:max_x() < (-top:getX() + 1000) then
 				table.insert(stream_items, stream:pop())
-				--debug("stream items:", #stream_items)
 			end
 	end
 end 
@@ -157,7 +170,9 @@ function draw()
  
 	-- draw spaceship only if the game is not lost
 	if text ~= "GAME OVER" then
-		love.graphics.setColor(255, 255, 255)
+		love.graphics.setColor(70, 90, 80)
+		love.graphics.polygon(love.draw_fill, ship_shape:getPoints()) 
+		love.graphics.setColor(120, 140, 130)
 		love.graphics.polygon(love.draw_line, ship_shape:getPoints()) 
 	end
 	
@@ -172,18 +187,28 @@ function draw()
 	love.graphics.setColor(255, 255, 255)
 	love.graphics.setFont(font12)
 	love.graphics.draw(text, 390, 300) 
-	if start == 1 and effect_timeout > 0 then
+	if start == 1 then
+		local y = 30
+		local scroll_in_time = 0.5
+		local scroll_out_time = 0.5
 		love.graphics.setFont(font20)
-		love.graphics.setColor(255, 40, 30)
-		local x = 30
-		if effect_timeout < 1 then
-			x = (30 - 400) + 400 * effect_timeout
-			love.graphics.setColor(
-				255 * effect_timeout,
-				40 * effect_timeout,
-				30 * effect_timeout)
+		for i, effect in ipairs(effect_state.running_effects) do
+			love.graphics.setColor(200, 80, 60)
+			local x = 30
+			local f = 1.0
+			if effect.timeout > (effect.timeout_original - scroll_in_time) then
+				-- scroll in
+				f = (effect.timeout_original - effect.timeout) / scroll_in_time
+			elseif effect.timeout < scroll_out_time then
+				-- scroll out
+				f = effect.timeout / scroll_out_time
+			end
+			x = (30 - 400) + 400 * f
+			love.graphics.setColor(200 * f, 80 * f, 60 * f)
+			local m = ''
+			love.graphics.draw(string.format("%04.2f %s%s",effect.timeout, effect.message, m), x, y)
+			y = y + 30
 		end
-		love.graphics.draw(string.format("%04.2f %s",effect_timeout, effect_message), x, 30)
 	end
 
 	love.graphics.setFont(font12)
@@ -192,7 +217,7 @@ function draw()
 	local text_survived = string.format("%06.0f seconds of survival", survived)
 	love.graphics.draw(text_survived, 500, 30)
 
-	local text_score = string.format("SCORE: %010d", score)
+	local text_score = string.format("SCORE: %010d x%d", score, effect_state.score_multiplier)
 	love.graphics.draw(text_score, 500, 45)
 	
 	love.graphics.setColor(255, 255, 255)
@@ -246,9 +271,8 @@ function menubutton(position, from, to, x, y)
 	 end
 end
 			
-invert_controls = false
 function mousepressed(x, y, button)
-	up = not invert_controls
+	up = not effect_state.inverted_controls
 	-- on which position is the button, from and to which menu, and the mouse position for the function
 	menubutton(0, 1, 0, x, y)
 	menubutton(1, 1, 2, x, y)
@@ -271,17 +295,19 @@ function mousepressed(x, y, button)
 		stream.top.y = 0
 		stream.bottom.x = 0
 		stream.bottom.y = 0
-		speed = 100.0
-		effect_off = nil
-		effect_timeout = 0.0
-		effect_message = nil
-		invert_controls = false
+		effect_state = {
+			score_multiplier = 1,
+			inverted_controls = false,
+			ship_size = 1,
+			speed = 100,
+			running_effects = {}
+		}
 		-- and more...
 	end
 end
 
 function mousereleased(x, y, button)
-	up = invert_controls
+	up = effect_state.inverted_controls
 end
  
 -- this is called every time a collision occurs 
@@ -292,7 +318,6 @@ function collision(a, b, c)
 	local item = nil
 	for i, obj in ipairs({a, b}) do
 		if obj ~= nil and obj.collision_type ~= nil then
-		--debug("---")
 		--table.foreach(stream_items, print)
 			if obj.collision_type == 'border' then c_border = true end
 			if obj.collision_type == 'ship' then c_ship = true end
@@ -311,17 +336,13 @@ function collision(a, b, c)
 
 	elseif c_ship and c_item then -- ship+item = ask item what to do
 
-		--[[ WELCOME TO SEGFAULT AREA ]]--
-
-		if effect_off ~= nil then
-			effect_off()
-			effect_off = nil
-		end
-
-		debug("setting up effect:", item.effect_message)
-		effect_timeout = item.effect_timeout
-		effect_message = item.effect_message
-		effect_off = item.effect_off
+		local e = {}
+		e.timeout_original = item.effect_timeout
+		e.timeout = item.effect_timeout
+		e.message = item.effect_message
+		e.off = item.effect_off
+		table.insert(effect_state.running_effects, e)
+		debug("turning on:", e.message)
 		item:effect_on()
 
 		-- stabilize ship

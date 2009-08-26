@@ -1,9 +1,6 @@
 -- vim: set noexpandtab:
 
 function _create_item(message, effect_on, effect_off, timeout)
-	if timeout == nil then
-		print("========= WTF TIMEOUT NIL msg=", message)
-	end
 	local y = math.random(200, 400)
 	local x = 760
 	local body = love.physics.newBody(world, x, y, 0.01)
@@ -19,11 +16,13 @@ function _create_item(message, effect_on, effect_off, timeout)
 		draw = function(self)
 				love.graphics.setColor(self.color[1], self.color[2], self.color[3])
 				love.graphics.polygon(love.draw_fill, self.shape:getPoints())
+				love.graphics.setColor(self.color[1] + 40, self.color[2] + 40, self.color[3] + 40)
+				love.graphics.polygon(love.draw_line, self.shape:getPoints())
 			end,
 		update = function(self, dt)
 				for i = 1,3 do
 					r = math.random(-10, 10)
-					if self.color[i] >= 245 then
+					if self.color[i] >= 200 then
 						r = -math.abs(r)
 					elseif self.color[i] <= 20 then
 						r = math.abs(r)
@@ -69,8 +68,10 @@ function _create_border_piece(stream, side, oldpos)
 		collision_type = 'border',
 		shape = shape,
 		draw = function(self)
-				love.graphics.setColor(180, 180, 180)
+				love.graphics.setColor(100, 110, 120)
 				love.graphics.polygon(love.draw_fill, self.shape:getPoints())
+				love.graphics.setColor(130, 140, 150)
+				love.graphics.polygon(love.draw_line, self.shape:getPoints())
 			end,
 		rightmost_x = newpos.x,
 		obsolete = function(self)
@@ -90,26 +91,32 @@ function pop(stream)
 	if math.random(0, 100) <= item_chance then
 		local x = math.random(0, 100)
 
-		if x < 10 then
+		if x < 20 then
 			msg = "ZACK! Control inversion"
-			on = function(self) invert_controls = true end
-			off = function() invert_controls = false end
+			on = function(self) effect_state.inverted_controls = not effect_state.inverted_controls end
+			off = function() effect_state.inverted_controls = not effect_state.inverted_controls end
 
-		elseif x < 20 then
+		elseif x < 40 then
 			msg = "SPEED BLAST"
-			on = function(self) speed = 200 end
-			off = function() speed = 100 end
+			on = function(self) effect_state.speed = effect_state.speed * 2 end
+			off = function() effect_state.speed = effect_state.speed / 2 end
 
-		elseif x < 30 then
+		elseif x < 60 then
 			msg = "BIG BLAST"
 			on = function(self)
+				effect_state.ship_size = effect_state.ship_size * 2
+				local sz = effect_state.ship_size
+				ship_shape:setData(nil)
 				ship_shape:destroy()
-				ship_shape = love.physics.newPolygonShape(ship, 0, 0, 100, 30, 0, 60)
+				ship_shape = love.physics.newPolygonShape(ship, 0, 0, 50 * sz, 15 * sz, 0, 30 * sz)
 				ship_shape:setData({collision_type = 'ship'})
 			end
 			off = function()
+				effect_state.ship_size = effect_state.ship_size / 2
+				local sz = effect_state.ship_size
+				ship_shape:setData(nil)
 				ship_shape:destroy()
-				ship_shape = love.physics.newPolygonShape(ship, 0, 0, 50, 15, 0, 30)
+				ship_shape = love.physics.newPolygonShape(ship, 0, 0, 50 * sz, 15 * sz, 0, 30 * sz)
 				ship_shape:setData({collision_type = 'ship'})
 			end
 
@@ -117,11 +124,10 @@ function pop(stream)
 			msg = "CA$H"
 			timeout = 3.0
 			on = function(self)
-				score_multiplier = 5
+				effect_state.score_multiplier = effect_state.score_multiplier * 4
 			end
 			off = function()
-				score = score + 10000
-				score_multiplier = 1
+				effect_state.score_multiplier = effect_state.score_multiplier / 4.0
 			end
 
 		end

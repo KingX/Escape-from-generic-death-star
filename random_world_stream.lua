@@ -101,7 +101,7 @@ function pop(stream)
 	if math.random(0, 100) <= item_chance then
 		local x = math.random(0, 60)
 
-		if x < 0 then
+		if x < 10 then
 			msg = "GRAVITY BLAST"
 			on = function(self) effect_state.inverted_controls = not effect_state.inverted_controls end
 			off = function() effect_state.inverted_controls = not effect_state.inverted_controls end
@@ -134,10 +134,10 @@ function pop(stream)
 			msg = "CA$H"
 			timeout = 3.0
 			on = function(self)
-				effect_state.score_multiplier = effect_state.score_multiplier * 4
+				effect_state.score_multiplier = effect_state.score_multiplier * 10
 			end
 			off = function()
-				effect_state.score_multiplier = effect_state.score_multiplier / 4.0
+				effect_state.score_multiplier = effect_state.score_multiplier / 10.0
 			end
 
 		end

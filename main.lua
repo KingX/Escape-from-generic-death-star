@@ -151,7 +151,8 @@ function update(dt)
 				ship:applyImpulse(0, -500000 * dt)
 			end
 
-			if stream:max_x() < (-top:getX() + 1000) then
+			-- get new stream items
+			while stream:max_x() < (-top:getX() + 1000) do
 				table.insert(stream_items, stream:pop())
 			end
 	end

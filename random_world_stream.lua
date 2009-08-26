@@ -1,14 +1,47 @@
 -- vim: set noexpandtab:
 
-function _create_item(message, effect_on, effect_off, timeout)
-	local y = math.random(200, 400)
-	local x = 760
+function _create_item_canon(stream)
+	local x = 1000
+	local y = 460
+	local shot_interval = .6
+	local speed = 0.4
+
+	r = {
+		kind = 'canon',
+		x = x,
+		y = y,
+		time_since_last_shot = 0,
+		shot_interval = shot_interval,
+		draw = function(self)
+			love.graphics.setColor(90, 90, 90)
+			love.graphics.circle(love.draw_fill, self.x, self.y, 50)
+			love.graphics.polygon(love.draw_fill, self.x, self.y+10, self.x, self.y-10, self.x-100, self.y-100)
+		end,
+		speed = speed,
+		update = function(self, dt)
+			self.x = self.x - dt * effect_state.speed * self.speed
+			self.time_since_last_shot = self.time_since_last_shot + dt
+			if self.time_since_last_shot >= shot_interval then
+				it = _create_random_item(self.x-100, self.y-100)
+				--it.body.applyImpulse(-30, -30)
+				it.body:setVelocity(-effect_state.speed * (1 + self.speed), -100)
+				--it.body:applyImpulse(-40, -40)
+				table.insert(stream_items, it)
+				self.time_since_last_shot = 0
+			end
+		end,
+		obsolete = function(self)
+			return self.x < -100
+		end
+	}
+	return r
+end
+
+function _create_item(message, effect_on, effect_off, timeout, x, y)
 	local body = love.physics.newBody(world, x, y, 0.01)
 	local shape = love.physics.newPolygonShape(body,
-		0, -20, 20, 0, 0, 20, -20, 0
+		-10, -10, 10, -10, 10, 10, -10, 10
 		)
-	body:applyImpulse(-20, -10)
-	body:setSpin(180)
 	r = {
 		shape = shape,
 		body = body,
@@ -92,57 +125,71 @@ function _create_border_piece(stream, side, oldpos)
   return r
 end
 
+function _create_random_item(x, y)
+	local rnd = math.random(0, 60)
+	local timeout = 10
+
+	if rnd < 0 then
+		msg = "GRAVITY BLAST"
+		on = function(self) effect_state.inverted_controls = not effect_state.inverted_controls end
+		off = function() effect_state.inverted_controls = not effect_state.inverted_controls end
+
+	elseif rnd < 40 then
+		msg = "SPEED BLAST"
+		on = function(self) effect_state.speed = effect_state.speed * 2 end
+		off = function() effect_state.speed = effect_state.speed / 2 end
+
+	elseif rnd < 50 then
+		msg = "BIG BLAST"
+		on = function(self)
+			effect_state.ship_size = effect_state.ship_size * 2
+			local sz = effect_state.ship_size
+			ship_shape:setData(nil)
+			ship_shape:destroy()
+			ship_shape = love.physics.newPolygonShape(ship, 0, 0, 50 * sz, 15 * sz, 0, 30 * sz)
+			ship_shape:setData({collision_type = 'ship'})
+		end
+		off = function()
+			effect_state.ship_size = effect_state.ship_size / 2
+			local sz = effect_state.ship_size
+			ship_shape:setData(nil)
+			ship_shape:destroy()
+			ship_shape = love.physics.newPolygonShape(ship, 0, 0, 50 * sz, 15 * sz, 0, 30 * sz)
+			ship_shape:setData({collision_type = 'ship'})
+		end
+	else
+		msg = "CA$H"
+		timeout = 3.0
+		on = function(self)
+			effect_state.score_multiplier = effect_state.score_multiplier * 10
+		end
+		off = function()
+			effect_state.score_multiplier = effect_state.score_multiplier / 10.0
+		end
+
+	end
+	r = _create_item(msg, on, off, timeout, x, y)
+	return r
+end
+
 function pop(stream)
 	local r = nil
 	local item_chance = 10 -- of 100
+	local canon_chance = 50
 	local msg, on, off
 	local timeout = 10
 
-	if math.random(0, 100) <= item_chance then
-		local x = math.random(0, 60)
-
-		if x < 10 then
-			msg = "GRAVITY BLAST"
-			on = function(self) effect_state.inverted_controls = not effect_state.inverted_controls end
-			off = function() effect_state.inverted_controls = not effect_state.inverted_controls end
-
-		elseif x < 40 then
-			msg = "SPEED BLAST"
-			on = function(self) effect_state.speed = effect_state.speed * 2 end
-			off = function() effect_state.speed = effect_state.speed / 2 end
-
-		elseif x < 60 then
-			msg = "BIG BLAST"
-			on = function(self)
-				effect_state.ship_size = effect_state.ship_size * 2
-				local sz = effect_state.ship_size
-				ship_shape:setData(nil)
-				ship_shape:destroy()
-				ship_shape = love.physics.newPolygonShape(ship, 0, 0, 50 * sz, 15 * sz, 0, 30 * sz)
-				ship_shape:setData({collision_type = 'ship'})
-			end
-			off = function()
-				effect_state.ship_size = effect_state.ship_size / 2
-				local sz = effect_state.ship_size
-				ship_shape:setData(nil)
-				ship_shape:destroy()
-				ship_shape = love.physics.newPolygonShape(ship, 0, 0, 50 * sz, 15 * sz, 0, 30 * sz)
-				ship_shape:setData({collision_type = 'ship'})
-			end
-
-		else
-			msg = "CA$H"
-			timeout = 3.0
-			on = function(self)
-				effect_state.score_multiplier = effect_state.score_multiplier * 10
-			end
-			off = function()
-				effect_state.score_multiplier = effect_state.score_multiplier / 10.0
-			end
-
-		end
-		r = _create_item(msg, on, off, timeout)
-
+	local rnd = math.random(0, 100)
+	if rnd <= item_chance then
+		local y = math.random(200, 400)
+		local x = 760
+		r = _create_random_item(x, y)
+		r.body:applyImpulse(-20, -10)
+		r.body:setSpin(180)
+	elseif rnd <= item_chance + canon_chance and not has_canon then
+		debug("creating canon")
+		r = _create_item_canon(stream)
+		debug("done")
 	else
 		if stream.top.x > stream.bottom.x then side = 'bottom'
 		else side = 'top' end

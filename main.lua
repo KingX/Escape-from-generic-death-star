@@ -15,6 +15,7 @@ end
 font12 = nil
 font20 = nil
 score = 0
+has_canon = false
 
 effect_state = {
 	score_multiplier = 1,
@@ -73,6 +74,14 @@ function load()
 end
 
 gc_elapsed = 0.0
+
+function update(dt)
+	ok, err = pcall(update_, dt)
+	if not ok then
+		print(err)
+		os.exit(1)
+	end
+end
 function update(dt) 
 	-- See if there are stream_items that are already scrolled away
 	-- (check every 5 seconds)
@@ -82,6 +91,10 @@ function update(dt)
 		local to_delete = {}
 		for i, v in ipairs(stream_items) do
 			if v == nil or (v.obsolete ~= nil and v:obsolete()) then
+				if v.kind == 'canon' then
+					debug("canon going away")
+					has_canon = false
+				end
 				table.insert(to_delete, i)
 			end
 		end
@@ -153,12 +166,26 @@ function update(dt)
 
 			-- get new stream items
 			while stream:max_x() < (-top:getX() + 1000) do
-				table.insert(stream_items, stream:pop())
+				local item = stream:pop()
+				table.insert(stream_items, item)
+				table.foreach(item, debug)
+				if item.kind == 'canon' then
+					debug("have canon")
+					has_canon = true
+				end
 			end
 	end
 end 
  
-function draw() 
+function draw()
+	ok, err = pcall(draw_)
+	if not ok then
+		print(err)
+		os.exit(1)
+	end
+end
+
+function draw_() 
 	love.graphics.setColor(255, 255, 255)
 	love.graphics.setFont(font12)
 
@@ -310,9 +337,17 @@ end
 function mousereleased(x, y, button)
 	up = effect_state.inverted_controls
 end
- 
+
+function collision(a, b, c)
+	ok, err = pcall(collision_, a, b, c)
+	if not ok then
+		print(err)
+		os.exit(1)
+	end
+end
+
 -- this is called every time a collision occurs 
-function collision(a, b, c) 
+function collision_(a, b, c) 
 	local c_border = false
 	local c_ship = false
 	local c_item = false
@@ -350,10 +385,8 @@ function collision(a, b, c)
 		ship:setSpin(0)
 		ship:setVelocity(0, 0)
 		ship:setAngle(0)
-	end
 
-	-- If item was involved in a collision, destroy it
-	if c_item then
+		-- destroy item
 		-- make shape non-colliding until garbage collecter munches it
 		item.shape:setMaskBits(0)
 		item.shape:setData(nil)
@@ -367,6 +400,10 @@ function collision(a, b, c)
 		debug("body count before gc:", world:getBodyCount())
 		collectgarbage()
 		debug("body count after gc:", world:getBodyCount())
+
+	elseif c_item and c_border then
+		item.shape:setMaskBits(0)
+	
 	end
 
 end

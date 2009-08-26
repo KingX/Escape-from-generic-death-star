@@ -113,8 +113,8 @@ function update(dt)
 	end
 
 	if menu == 0 then
-			if elapsed < 5 then
-				text = string.format("Start in %d", 6 - elapsed)
+			if elapsed < 1 then
+				text = string.format("Start in %d", 2 - elapsed)
 				elapsed = elapsed + dt
 			elseif start ~= 1 then
 				start = 1

@@ -92,7 +92,6 @@ function update(dt)
 		for i, v in ipairs(stream_items) do
 			if v == nil or (v.obsolete ~= nil and v:obsolete()) then
 				if v.kind == 'canon' then
-					debug("canon going away")
 					has_canon = false
 				end
 				table.insert(to_delete, i)
@@ -168,9 +167,7 @@ function update(dt)
 			while stream:max_x() < (-top:getX() + 1000) do
 				local item = stream:pop()
 				table.insert(stream_items, item)
-				table.foreach(item, debug)
 				if item.kind == 'canon' then
-					debug("have canon")
 					has_canon = true
 				end
 			end

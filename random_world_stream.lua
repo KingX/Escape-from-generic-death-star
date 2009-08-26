@@ -139,7 +139,12 @@ function _create_random_item(x, y)
 		on = function(self) effect_state.speed = effect_state.speed * 2 end
 		off = function() effect_state.speed = effect_state.speed / 2 end
 
-	elseif rnd < 50 then
+		elseif x < 50 then
+			msg = "LOL BACKWARDS BLAST"
+			on = function(self) effect_state.speed = effect_state.speed * -1 end
+			off = function() effect_state.speed = effect_state.speed * -1 end
+
+	elseif rnd < 60 then
 		msg = "BIG BLAST"
 		on = function(self)
 			effect_state.ship_size = effect_state.ship_size * 2

@@ -92,7 +92,7 @@ function pop(stream)
 		local x = math.random(0, 60)
 
 		if x < 0 then
-			msg = "ZACK! Control inversion"
+			msg = "GRAVITY BLAST"
 			on = function(self) effect_state.inverted_controls = not effect_state.inverted_controls end
 			off = function() effect_state.inverted_controls = not effect_state.inverted_controls end
 

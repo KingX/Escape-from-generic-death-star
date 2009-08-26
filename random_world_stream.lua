@@ -57,20 +57,30 @@ function _create_border_piece(stream, side, oldpos)
 
 	local shape = love.physics.newPolygonShape(base,
 		oldpos.x, y0,
-		oldpos.x, oldpos.y,
+		oldpos.x, oldpos.y + math.random(-10, 10),
 		newpos.x, newpos.y,
 		newpos.x, y0
 		)
 
 	stream[side] = newpos
 
+	local r = math.random(100, 120)
+	local gadd = math.random(2, 7)
+	local badd = math.random(2, 7)
+	local color = {
+				[0] = r,
+				[1] = r + gadd,
+				[2] = r + gadd + badd
+		}
 	local r = {
+		color = color,
 		collision_type = 'border',
 		shape = shape,
 		draw = function(self)
 				love.graphics.setColor(100, 110, 120)
+				love.graphics.setColor(self.color[0], self.color[1], self.color[2])
 				love.graphics.polygon(love.draw_fill, self.shape:getPoints())
-				love.graphics.setColor(130, 140, 150)
+				love.graphics.setColor(self.color[0] - 20, self.color[1] - 20, self.color[2] - 20)
 				love.graphics.polygon(love.draw_line, self.shape:getPoints())
 			end,
 		rightmost_x = newpos.x,

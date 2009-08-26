@@ -213,7 +213,7 @@ function draw()
 
 	love.graphics.setFont(font12)
 	-- Intentionally draw these always so user can see its latest score in menu
-	love.graphics.setColor(128, 128, 128)
+	love.graphics.setColor(255,255,255)
 	local text_survived = string.format("%06.0f seconds of survival", survived)
 	love.graphics.draw(text_survived, 500, 30)
 

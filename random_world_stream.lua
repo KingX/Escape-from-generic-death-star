@@ -89,9 +89,9 @@ function pop(stream)
 	local timeout = 10
 
 	if math.random(0, 100) <= item_chance then
-		local x = math.random(0, 100)
+		local x = math.random(0, 60)
 
-		if x < 20 then
+		if x < 0 then
 			msg = "ZACK! Control inversion"
 			on = function(self) effect_state.inverted_controls = not effect_state.inverted_controls end
 			off = function() effect_state.inverted_controls = not effect_state.inverted_controls end

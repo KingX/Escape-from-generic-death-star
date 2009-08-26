@@ -106,10 +106,15 @@ function pop(stream)
 			on = function(self) effect_state.inverted_controls = not effect_state.inverted_controls end
 			off = function() effect_state.inverted_controls = not effect_state.inverted_controls end
 
-		elseif x < 40 then
+		elseif x < 10 then
 			msg = "SPEED BLAST"
 			on = function(self) effect_state.speed = effect_state.speed * 2 end
 			off = function() effect_state.speed = effect_state.speed / 2 end
+
+		elseif x < 40 then
+			msg = "LOL BACKWARDS BLAST"
+			on = function(self) effect_state.speed = effect_state.speed * -1 end
+			off = function() effect_state.speed = effect_state.speed * -1 end
 
 		elseif x < 60 then
 			msg = "BIG BLAST"

@@ -2,36 +2,62 @@
 
 function _create_item_canon(stream)
 	local x = 1000
-	local y = 460
+	local y 
 	local shot_interval = .6
 	local speed = 0.4
+	local radius = 20
+	local len = 50
+	local d = 150
+	local side
+	if math.random(1, 2) == 1 then
+		side = 'top'
+	end
+	if side == 'top' then
+		y = 600 - d
+		offset = {x=-len, y=-len}
+	else
+		y = d
+		offset = {x=-len, y=len}
+	end
 
 	r = {
 		kind = 'canon',
 		x = x,
 		y = y,
 		time_since_last_shot = 0,
+		offset = offset,
 		shot_interval = shot_interval,
+		radius = radius,
 		draw = function(self)
+			love.graphics.setLineWidth(2)
+
 			love.graphics.setColor(90, 90, 90)
-			love.graphics.circle(love.draw_fill, self.x, self.y, 50)
-			love.graphics.polygon(love.draw_fill, self.x, self.y+10, self.x, self.y-10, self.x-100, self.y-100)
+			love.graphics.polygon(love.draw_fill, self.x, self.y+10, self.x, self.y-10, self.x+offset.x, self.y+offset.y)
+			love.graphics.setColor(120, 120, 120)
+			love.graphics.polygon(love.draw_line, self.x, self.y+10, self.x, self.y-10, self.x+offset.x, self.y+offset.y)
+
+			love.graphics.setColor(90, 90, 90)
+			love.graphics.circle(love.draw_fill, self.x, self.y, self.radius)
+			love.graphics.setColor(120, 120, 120)
+			love.graphics.circle(love.draw_line, self.x, self.y, self.radius)
 		end,
 		speed = speed,
 		update = function(self, dt)
 			self.x = self.x - dt * effect_state.speed * self.speed
 			self.time_since_last_shot = self.time_since_last_shot + dt
 			if self.time_since_last_shot >= shot_interval then
-				it = _create_random_item(self.x-100, self.y-100)
-				--it.body.applyImpulse(-30, -30)
-				it.body:setVelocity(-effect_state.speed * (1 + self.speed), -100)
-				--it.body:applyImpulse(-40, -40)
+				it = _create_random_item(self.x+self.offset.x, self.y+self.offset.y)
+				it.body:setVelocity(-effect_state.speed * (1 + self.speed), self.offset.y)
 				table.insert(stream_items, it)
 				self.time_since_last_shot = 0
 			end
 		end,
 		obsolete = function(self)
-			return self.x < -100
+			local r = self.x < (-2 * d)
+			if r then
+				debug(string.format("cannon at %d is obsolete!", self.x))
+			end
+			return r
 		end
 	}
 	return r
@@ -109,12 +135,33 @@ function _create_border_piece(stream, side, oldpos)
 		color = color,
 		collision_type = 'border',
 		shape = shape,
+		left_y = oldpos.y,
 		draw = function(self)
-				love.graphics.setColor(100, 110, 120)
+				--love.graphics.setColor(80, 90, 100)
+				love.graphics.setLineWidth(1)
 				love.graphics.setColor(self.color[0], self.color[1], self.color[2])
 				love.graphics.polygon(love.draw_fill, self.shape:getPoints())
 				love.graphics.setColor(self.color[0] - 20, self.color[1] - 20, self.color[2] - 20)
+				--love.graphics.setColor(140, 150, 160)
 				love.graphics.polygon(love.draw_line, self.shape:getPoints())
+				local ps = {self.shape:getPoints()}
+				-- find points that should carry the outline
+				local line_ps = {}
+				local left_x = nil
+				local left_y_high = 0
+				love.graphics.setLineWidth(3)
+				for i = 0, 3 do
+					if ps[i*2+2] ~= 0 and ps[i*2+2] ~= 600 then
+						table.insert(line_ps, ps[i*2+1])
+						table.insert(line_ps, ps[i*2+2])
+					end
+				end
+				--table.foreach(line_ps, print)
+				--love.graphics.setColor(120, 120, 120)
+				if #line_ps == 4 then
+					love.graphics.line(line_ps[1], line_ps[2], line_ps[3], line_ps[4])
+				end
+				love.graphics.setLineWidth(1)
 			end,
 		rightmost_x = newpos.x,
 		obsolete = function(self)

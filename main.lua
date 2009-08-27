@@ -53,7 +53,7 @@ function load()
  
 	-- create the ground and top body at (0, *) with mass 0 
 	ground = love.physics.newBody(world, 0, 450, 0) 
-	top = love.physics.newBody(world, 0, 100, 0) 
+	top = love.physics.newBody(world, 0, 150, 0) 
 
 	stream = require('random_world_stream.lua').create()
 
@@ -90,18 +90,22 @@ function update(dt)
 		gc_elapsed = 0.0
 		local to_delete = {}
 		for i, v in ipairs(stream_items) do
-			if v == nil or (v.obsolete ~= nil and v:obsolete()) then
-				if v.kind == 'canon' then
-					has_canon = false
-				end
+			if (v == nil) or (v.obsolete ~= nil and v:obsolete()) then
 				table.insert(to_delete, i)
 			end
 		end
 		-- This is actually a 'reverse' operation
 		table.sort(to_delete, function(a,b) return a>b end)
 		for j, idx in ipairs(to_delete) do
-			stream_items[idx].shape:setData(nil)	
-			stream_items[idx].shape:destroy()	
+			if stream_items[idx] ~= nil then
+				if stream_items[idx].kind == 'canon' then
+					has_canon = false
+				end
+				if stream_items[idx].shape ~= nil then
+					stream_items[idx].shape:setData(nil)	
+					stream_items[idx].shape:destroy()	
+				end
+			end
 			table.remove(stream_items, idx)
 		end
 	end
@@ -198,6 +202,7 @@ function draw_()
 		love.graphics.setColor(70, 90, 80)
 		love.graphics.polygon(love.draw_fill, ship_shape:getPoints()) 
 		love.graphics.setColor(120, 140, 130)
+		love.graphics.setLineWidth(3)
 		love.graphics.polygon(love.draw_line, ship_shape:getPoints()) 
 	end
 	
@@ -382,7 +387,9 @@ function collision_(a, b, c)
 		ship:setSpin(0)
 		ship:setVelocity(0, 0)
 		ship:setAngle(0)
+	end
 
+	if c_item then
 		-- destroy item
 		-- make shape non-colliding until garbage collecter munches it
 		item.shape:setMaskBits(0)
@@ -394,12 +401,12 @@ function collision_(a, b, c)
 			end
 		end
 		-- om nom nom nom
-		debug("body count before gc:", world:getBodyCount())
+		--debug("body count before gc:", world:getBodyCount())
 		collectgarbage()
-		debug("body count after gc:", world:getBodyCount())
+		--debug("body count after gc:", world:getBodyCount())
 
-	elseif c_item and c_border then
-		item.shape:setMaskBits(0)
+	--elseif c_item and c_border then
+	--	item.shape:setMaskBits(0)
 	
 	end
 

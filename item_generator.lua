@@ -109,7 +109,7 @@ item_effects = {
 		color = { 70, 70, 200 }
 	},
 	{
-		message = 'GRAVITY BLAST',
+		message = '!ENGINE DEPOLARIZED!',
 		on = function() game_state.inverted_controls = not game_state.inverted_controls end,
 		off = function() game_state.inverted_controls = not game_state.inverted_controls end,
 		timeout = 10,

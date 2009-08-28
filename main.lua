@@ -178,6 +178,16 @@ function draw_()
 				ship.body:getY() + game_state.ship_size * 12,
 				game_state.ship_size * 20
 			)
+			love.graphics.circle(love.draw_fill,
+				ship.body:getX() + game_state.ship_size * 20,
+				ship.body:getY() + game_state.ship_size * 12,
+				game_state.ship_size * 15
+			)
+			love.graphics.circle(love.draw_fill,
+				ship.body:getX() + game_state.ship_size * 20,
+				ship.body:getY() + game_state.ship_size * 12,
+				game_state.ship_size * 10
+			)
 		end
 
 		love.graphics.setColor(80, 90, 80)

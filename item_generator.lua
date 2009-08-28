@@ -101,6 +101,7 @@ function item_generator.class:draw()
 end
 
 item_effects = {
+	--[[
 	{
 		message = 'SPEED BLAST',
 		on = function() game_state.speed = game_state.speed * 2 end,
@@ -140,6 +141,33 @@ item_effects = {
 		end,
 		timeout = 10,
 		color = { 150, 150, 150 }
+	},
+	{
+		message = 'FLIP!',
+		on = function()
+			local x, y = world_camera:getScaleFactor()
+			world_camera:setScaleFactor(x, y*-1)
+		end,
+		off = function()
+			local x, y = world_camera:getScaleFactor()
+			world_camera:setScaleFactor(x, y*-1)
+		end,
+		timeout = 10,
+		color = { 200, 190, 80 }
+	},
+	]]--
+	{
+		message = 'REVERSE',
+		on = function()
+			local x, y = world_camera:getScaleFactor()
+			world_camera:setScaleFactor(x*-1, y)
+		end,
+		off = function()
+			local x, y = world_camera:getScaleFactor()
+			world_camera:setScaleFactor(x*-1, y)
+		end,
+		timeout = 10,
+		color = { 200, 90, 200 }
 	}
 }
 

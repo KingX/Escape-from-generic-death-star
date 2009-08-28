@@ -224,7 +224,8 @@ function draw_()
 				love.graphics.setColorMode(love.color_modulate)
 				love.graphics.setColor(unpack(color))
 				local x = 30
-				local f = 1.0
+				local f = 1.0 -- fade in/out [0...1]
+				local rt = effect.timeout / effect.timeout_original
 				if effect.timeout > (effect.timeout_original - scroll_in_time) then
 					-- scroll in
 					f = (effect.timeout_original - effect.timeout) / scroll_in_time
@@ -233,7 +234,7 @@ function draw_()
 					f = effect.timeout / scroll_out_time
 				end
 				x = (30 - 400) + 400 * f
-				love.graphics.setColor(color[1], color[2], color[3], 255 * f)
+				love.graphics.setColor(color[1], color[2], color[3], 50 + 205 * rt)
 				local m = ''
 				love.graphics.draw(string.format("%04.2f %s%s",effect.timeout, effect.message, m), x, y)
 				y = y + 30

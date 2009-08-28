@@ -1,413 +1,306 @@
 -- vim: set noexpandtab:
 
-text = "START" 
-survived = 0.0
-
--- the level stream
-stream = nil
--- stream "cache"
-stream_items = {}
---debug = function() end
-debug = function(...)
-	print(...)
-	io.flush()
-end
-font12 = nil
-font20 = nil
-score = 0
-has_canon = false
-
-effect_state = {
-	score_multiplier = 1,
-	inverted_controls = false,
-	ship_size = 1,
-	speed = 100,
-	running_effects = {}
+config = {
+	resolution = {x=800, y=600},
+	button_up = 1,
 }
 
-function init_ship()
-	-- create ship body at 400,200
-	ship = love.physics.newBody(world, 400, 200) 
-	
-	-- attach ship shape to its body
-	ship_shape = love.physics.newPolygonShape(ship, 0, 0, 50, 15, 0, 30)
-	ship_shape:setData({
-		collision_type = 'ship'
-	})
-	
-	-- mass of spaceship, center may be at 20,15 :) weight is 2000, intertia 1, no idea y, but it works 
-	ship:setMass(20, 15, 2000, 1) 
+love.filesystem.require('utils.lua')
+love.filesystem.require('background.lua')
+love.filesystem.require('border.lua')
+love.filesystem.require('camera.lua')
+love.filesystem.require('item_generator.lua')
+
+game_state = nil
+world = nil
+ship = nil
+controls = nil
+bg0 = nil
+bg1 = nil
+main_border = nil
+items = nil
+fonts = nil
+-- for collision
+category = { 
+	ship = 2,
+	border = 3,
+	item = 4
+}
+
+function switch_phase(new_phase)
+	game_state.phase = new_phase
+	game_state.phase_duration = 0
 end
-	
 
-function load() 
-	math.randomseed(os.time())
+function update_ship_shape()
+	if ship.shape ~= nil then
+		ship.shape:setData(nil)
+		ship.shape:destroy()
+	end
+	ship.shape = love.physics.newPolygonShape(ship.body,
+		0, -15 * game_state.ship_size, 50*game_state.ship_size, 0, 0, 15*game_state.ship_size
+	)
+	ship.shape:setData(ship)
+	ship.shape:setCategory(category.ship)
+end
 
-	-- name of the game
-	love.graphics.setCaption("escape from generic death star")
+function start_game()
 
-	-- create a world with size 
-	world = love.physics.newWorld(200000, 2000) 
-	-- gravity at the beginning is zero
-	world:setGravity(0, 0) 
- 
-	-- create the ground and top body at (0, *) with mass 0 
-	ground = love.physics.newBody(world, 0, 450, 0) 
-	top = love.physics.newBody(world, 0, 150, 0) 
+	-- Set up game state
+	game_state = {
+		phase = 'running', -- countdown / running / gameover
+		score_multiplier = 1,
+		phase_duration = 0,
+		inverted_controls = false,
+		ship_size = 1,
+		speed = 200,
+		running_effects = {}
+	}
 
-	stream = require('random_world_stream.lua').create()
+	controls = {
+		up = false
+	}
 
-	init_ship()
-
-	-- set the collision callback 
+	-- Set up world
+	world = love.physics.newWorld(
+		-config.resolution.x * 1, -config.resolution.y * 2000,
+		config.resolution.x * 20000, config.resolution.y * 2000, 0, 100, true)
 	world:setCallback(collision) 
- 
-	up = false
-	elapsed = 0
-	start = 0
-	menu = 1
 
-	-- define used fonts
-	font12 = love.graphics.newFont(love.default_font, 12) 
-	font20 = love.graphics.newFont(love.default_font, 20) 
+	-- Set up ship
+	local ship_body = love.physics.newBody(world, 0, 0)
+	local ship_shape = love.physics.newPolygonShape(ship_body, 0, -15, 50, 0, 0, 15)
+	ship_body:setMassFromShapes()
+	ship = {
+		type = 'ship',
+		body = ship_body,
+		shape = ship_shape
+	}
+	ship_shape:setData(ship)
+	ship_shape:setCategory(category.ship)
+
+	world_camera = camera.new()
+	world_camera:setScreenOrigin(0.5, 0.5)
+
+	-- Cool for debugging background & borders
+	--world_camera:scaleBy(.5, .5)
+
+	gui_camera = camera.new()
+	gui_camera:setScreenOrigin(0, 0)
+
+	-- Set up background
 	
+	bg0 = background.new(game_state.speed - 50)
+	bg1 = parallax.new(game_state.speed - 100)
+
+	main_border = border.new(
+		0.2, -- min top/bottom distance
+		0.1, -- piece width
+		0.05 -- max change in height
+	)
+	main_border.max_distance = 0.5 * config.resolution.y
+
+	items = item_generator.new(0.01)
+
 end
 
-gc_elapsed = 0.0
+function load()
+	--cam = camera.new()
 
-function update(dt)
-	ok, err = pcall(update_, dt)
-	if not ok then
-		print(err)
-		os.exit(1)
+	math.randomseed(os.time())
+	love.graphics.setCaption("Escape from generic death star")
+
+	fonts = {
+		normal = love.graphics.newFont(love.default_font, 12),
+		big = love.graphics.newFont(love.default_font, 20),
+		giant = love.graphics.newFont(love.default_font, 96)
+	}
+
+
+	start_game()
+end
+
+function update_(dt)
+	ship.body:setX(ship.body:getX() + dt * game_state.speed)
+	world_camera:setOrigin(ship.body:getX(), ship.body:getY())
+	local phase = game_state.phase
+
+	game_state.phase_duration = game_state.phase_duration + dt
+
+	if phase == 'running' or phase == 'gameover' then
+		world:update(dt)
+		main_border:update(dt)
 	end
-end
-function update(dt) 
-	-- See if there are stream_items that are already scrolled away
-	-- (check every 5 seconds)
-	gc_elapsed = gc_elapsed + dt
-	if gc_elapsed >= 5.0 then
-		gc_elapsed = 0.0
+
+	if phase == 'running' then
+		bg0:update(dt)
+		bg1:update(dt)
+		items:update(dt)
+		if controls.up ~= game_state.inverted_controls then
+			ship.body:applyImpulse(0, -300000 * dt)
+		end
+
+		-- Update effects
 		local to_delete = {}
-		for i, v in ipairs(stream_items) do
-			if (v == nil) or (v.obsolete ~= nil and v:obsolete()) then
-				table.insert(to_delete, i)
-			end
-		end
-		-- This is actually a 'reverse' operation
-		table.sort(to_delete, function(a,b) return a>b end)
-		for j, idx in ipairs(to_delete) do
-			if stream_items[idx] ~= nil then
-				if stream_items[idx].kind == 'canon' then
-					has_canon = false
-				end
-				if stream_items[idx].shape ~= nil then
-					stream_items[idx].shape:setData(nil)	
-					stream_items[idx].shape:destroy()	
+		for i, effect in ipairs(game_state.running_effects) do
+			if effect ~= nil then
+				effect.timeout = effect.timeout - dt
+				if effect.timeout <= 0 then
+					effect.off()
+					table.insert(to_delete, 1, i)
 				end
 			end
-			table.remove(stream_items, idx)
 		end
-	end
-
-	-- Call update callbacks for items that have one
-	for i, item in ipairs(stream_items) do
-		if item ~= nil and item.update ~= nil then
-			item:update(dt)
+		for i, idx in ipairs(to_delete) do
+			table.remove(game_state.running_effects, idx)
 		end
-	end
-
-	-- update the world 
-	world:update(dt)  
-
-	-------[[ handle effects ]]-------
-
-	-- Decrease effect time or turn effect off when its over
-	for i, effect in ipairs(effect_state.running_effects) do
-		if effect.timeout > 0 then
-			effect.timeout = effect.timeout - dt
-		else
-			effect.off()
-			-- We're currently iterating, set the to-delete effect to nil
-			effect_state.running_effects[i] = nil
-		end
-	end
-	-- clean up nil effects
-	for i=#effect_state.running_effects,1,-1 do
-		if effect_state.running_effects[i] == nil then
-			table.remove(effect_state.running_effects, i)
-		end
-	end
-
-	---------[[ handle menu stuff ]]-------
-
-	if menu == 0 then
-			if elapsed < 1 then
-				text = string.format("Start in %d", 2 - elapsed)
-				elapsed = elapsed + dt
-			elseif start ~= 1 then
-				start = 1
-				world:setGravity(0, 100) 
-				survived = 0.0
-				score = 0
-				ship:applyImpulse(0, 1)
-				elapsed = 7
-				text = ""
-			end
-	end
-
-	---------[[ score and ground movement ]]-------
-
-	if start == 1 then
-		 	survived = survived + dt
-			score = score + 100 * dt * effect_state.score_multiplier
-			ground:setX(ground:getX() - dt * effect_state.speed)
-			top:setX(top:getX() - dt * effect_state.speed)
-			if up then 
-				ship:applyImpulse(0, -500000 * dt)
-			end
-
-			-- get new stream items
-			while stream:max_x() < (-top:getX() + 1000) do
-				local item = stream:pop()
-				table.insert(stream_items, item)
-				if item.kind == 'canon' then
-					has_canon = true
-				end
-			end
-	end
-end 
- 
-function draw()
-	ok, err = pcall(draw_)
-	if not ok then
-		print(err)
-		os.exit(1)
 	end
 end
 
-function draw_() 
-	love.graphics.setColor(255, 255, 255)
-	love.graphics.setFont(font12)
+function draw_()
+	setCamera(world_camera)
+	local phase = game_state.phase
 
-	-- draw the polygons with lines
-	for i, v in ipairs(stream_items) do
-		if v ~= nil and v.draw ~= nil then
-			v:draw()
+	x0, y0, x1, y1 = get_visible_area()
+
+	love.graphics.setColor(90, 90, 90)
+	love.graphics.rectangle(love.draw_fill, x0, y0, x1-x0, y1-y0)
+
+	bg0:draw()
+	bg1:draw()
+
+	main_border:draw()
+	items:draw()
+
+	if phase == 'running' then
+		if controls.up then
+			love.graphics.setColorMode(love.color_modulate)
+			love.graphics.setColor(220, 220, 80, 40)
+			love.graphics.circle(love.draw_fill,
+				ship.body:getX() + game_state.ship_size * 20,
+				ship.body:getY() + game_state.ship_size * 12,
+				game_state.ship_size * 20
+			)
 		end
-	end
- 
-	-- draw spaceship only if the game is not lost
-	if text ~= "GAME OVER" then
-		love.graphics.setColor(70, 90, 80)
-		love.graphics.polygon(love.draw_fill, ship_shape:getPoints()) 
-		love.graphics.setColor(120, 140, 130)
-		love.graphics.setLineWidth(3)
-		love.graphics.polygon(love.draw_line, ship_shape:getPoints()) 
-	end
-	
-	-- reset button for testing
-	
-	love.graphics.setColor(255, 0, 0)
-	love.graphics.rectangle(0, 750, 550, 40, 20)
-	love.graphics.setColor(0, 0, 255)
-	love.graphics.draw("RESET", 752, 565)
 
-	-- draw text
-	love.graphics.setColor(255, 255, 255)
-	love.graphics.setFont(font12)
-	love.graphics.draw(text, 390, 300) 
-	if start == 1 then
+		love.graphics.setColor(80, 90, 80)
+		love.graphics.polygon(love.draw_fill, ship.shape:getPoints()) 
+		love.graphics.setColor(130, 140, 130)
+		love.graphics.setLineWidth(3)
+		love.graphics.polygon(love.draw_line, ship.shape:getPoints()) 
+
+		-- Running effects
+		setCamera(gui_camera)
 		local y = 30
 		local scroll_in_time = 0.5
 		local scroll_out_time = 0.5
-		love.graphics.setFont(font20)
-		for i, effect in ipairs(effect_state.running_effects) do
-			love.graphics.setColor(200, 80, 60)
-			local x = 30
-			local f = 1.0
-			if effect.timeout > (effect.timeout_original - scroll_in_time) then
-				-- scroll in
-				f = (effect.timeout_original - effect.timeout) / scroll_in_time
-			elseif effect.timeout < scroll_out_time then
-				-- scroll out
-				f = effect.timeout / scroll_out_time
+		love.graphics.setFont(fonts.normal)
+		for i, effect in ipairs(game_state.running_effects) do
+			if effect ~= nil then
+				love.graphics.setColor(200, 80, 60)
+				local x = 30
+				local f = 1.0
+				if effect.timeout > (effect.timeout_original - scroll_in_time) then
+					-- scroll in
+					f = (effect.timeout_original - effect.timeout) / scroll_in_time
+				elseif effect.timeout < scroll_out_time then
+					-- scroll out
+					f = effect.timeout / scroll_out_time
+				end
+				x = (30 - 400) + 400 * f
+				love.graphics.setColor(200 * f, 80 * f, 60 * f)
+				local m = ''
+				love.graphics.draw(string.format("%04.2f %s%s",effect.timeout, effect.message, m), x, y)
+				y = y + 30
 			end
-			x = (30 - 400) + 400 * f
-			love.graphics.setColor(200 * f, 80 * f, 60 * f)
-			local m = ''
-			love.graphics.draw(string.format("%04.2f %s%s",effect.timeout, effect.message, m), x, y)
-			y = y + 30
+		end
+		setCamera(world_camera)
+
+	end
+
+	if phase == 'gameover' then
+		local s = 'GAME OVER'
+		local font = fonts.giant
+		local w = font:getWidth(s)
+		local h = font:getHeight()
+		local t = 1
+		local x0, y0, x1, y1 = get_visible_area()
+		local dx = x1-x0
+		local dy = y1-y0
+
+		love.graphics.setColor(255, 0, 0)
+		love.graphics.setFont(font)
+		if game_state.phase_duration < t then
+			local alpha = game_state.phase_duration * 360
+			local scale = game_state.phase_duration / t
+			local x = x0 + dx/2 - math.cos(math.rad(alpha)) * w/2 * scale^2
+			local y = y0 + dy/2 - math.sin(math.rad(alpha)) * w/2 * scale^2
+			love.graphics.draw(s, x,y, alpha, game_state.phase_duration / t)
+		else
+			love.graphics.draw(s, x0 + dx/2 - w/2, y0 + dy/2)
 		end
 	end
-
-	love.graphics.setFont(font12)
-	-- Intentionally draw these always so user can see its latest score in menu
-	love.graphics.setColor(255,255,255)
-	local text_survived = string.format("%06.0f seconds of survival", survived)
-	love.graphics.draw(text_survived, 500, 30)
-
-	local text_score = string.format("SCORE: %010d x%d", score, effect_state.score_multiplier)
-	love.graphics.draw(text_score, 500, 45)
-	
-	love.graphics.setColor(255, 255, 255)
-	-- draw menu
-	-- startmenu
-	if menu == 1 then
-		love.graphics.setColor(15, 193, 153)
-		love.graphics.rectangle(0, 100, 100, 600, 400)
-		menuitem(0, "START GAME")
-		menuitem(1, "INSTRUCTION")
-		menuitem(2, "CREDITS")
-		menuitem(3, "EXIT")
-	end
-	-- instruction menu
-	if menu == 2 then
-		love.graphics.setColor(15, 193, 153)
-		love.graphics.rectangle(0, 100, 100, 600, 400)
-		love.graphics.setColor(255, 255, 255)
-		love.graphics.setFont(font20)
-		love.graphics.draw("Das übliche...\nAlso BÄM BÄM BÄM", 340, 180)
-		menuitem(3, "ZURÜCK")
-	end
-	-- credits menu
-	if menu == 3 then
-		love.graphics.setColor(15, 193, 153)
-		love.graphics.rectangle(0, 100, 100, 600, 400)
-		love.graphics.setColor(255, 255, 255)
-		love.graphics.setFont(font20)
-		love.graphics.draw("Real Entertainment Unified Developing Enterprise", 150, 180)
-		menuitem(3, "ZURÜCK")
-	end	
-	-- exit programm
-	if menu == 4 then
-		os.exit()
-	end	 
-end 
-
-function menuitem(position, caption)
-	love.graphics.setColor(6, 77, 61)
-	love.graphics.rectangle(0, 150, 150 + position * 75, 500, 50)
-	love.graphics.setColor(255, 255, 255)
-	love.graphics.setFont(font20)
-	love.graphics.draw(caption, 340, 180 + position * 75)	 
 end
 
-function menubutton(position, from, to, x, y)
-	 if menu == from then
-			if x > 150 and y > 150 + position * 75 and x < 650 and y < 200 + position * 75 then
-				menu = to
-			end
-	 end
-end
-			
-function mousepressed(x, y, button)
-	up = not effect_state.inverted_controls
-	-- on which position is the button, from and to which menu, and the mouse position for the function
-	menubutton(0, 1, 0, x, y)
-	menubutton(1, 1, 2, x, y)
-	menubutton(2, 1, 3, x, y)
-	menubutton(3, 1, 4, x, y)
-	menubutton(3, 2, 1, x, y)
-	menubutton(3, 3, 1, x, y)
-	-- resetbutton
-	if x > 750 and y > 550 and x < 790 and y < 570 then
-		ship:setY(200)
-		ship:setX(400)
-		ship:setAngle(0)
-		ship:setSpin(0)
-		ship:setVelocity(0,0)
-		start = 0
-		elapsed = 0
-		world:setGravity(0, 0)
-		stream_items = {}
-		stream.top.x = 0
-		stream.top.y = 0
-		stream.bottom.x = 0
-		stream.bottom.y = 0
-		effect_state = {
-			score_multiplier = 1,
-			inverted_controls = false,
-			ship_size = 1,
-			speed = 100,
-			running_effects = {}
-		}
-		-- and more...
-	end
+function mousepressed_(x, y, button)
+	if button == config.button_up then controls.up = true end
 end
 
-function mousereleased(x, y, button)
-	up = effect_state.inverted_controls
+function mousereleased_(x, y, button)
+	if button == config.button_up then controls.up = false end
 end
 
-function collision(a, b, c)
-	ok, err = pcall(collision_, a, b, c)
-	if not ok then
-		print(err)
-		os.exit(1)
-	end
-end
-
--- this is called every time a collision occurs 
-function collision_(a, b, c) 
-	local c_border = false
-	local c_ship = false
-	local c_item = false
+function collision_(a, b, c)
+	local counts = { ship = 0, border = 0, item = 0 }
 	local item = nil
-	for i, obj in ipairs({a, b}) do
-		if obj ~= nil and obj.collision_type ~= nil then
-		--table.foreach(stream_items, print)
-			if obj.collision_type == 'border' then c_border = true end
-			if obj.collision_type == 'ship' then c_ship = true end
-			if obj.collision_type == 'item' then
-				c_item = true
-				item = obj
+
+	for i, x in ipairs({a, b}) do
+		if x ~= nil then
+			counts[x.type] = counts[x.type] + 1
+			if x.type == 'item' then
+				item = x
 			end
 		end
 	end
 
-	if c_ship and c_border then -- ship+border = death
-		world:setGravity(0, 0) 
-		text = "GAME OVER"
-		menu = 1
-		start = 0
+	if game_state.phase ~= 'running' then
+		return
+	end
 
-	elseif c_ship and c_item then -- ship+item = ask item what to do
-
-		local e = {}
-		e.timeout_original = item.effect_timeout
-		e.timeout = item.effect_timeout
-		e.message = item.effect_message
-		e.off = item.effect_off
-		table.insert(effect_state.running_effects, e)
-		debug("turning on:", e.message)
-		item:effect_on()
+	if counts.ship == 1 and counts.item == 1 then
+		item.effect.timeout_original = item.effect.timeout
+		item.effect.on()
+		table.insert(
+			game_state.running_effects, {
+				message = item.effect.message,
+				off = item.effect.off,
+				timeout = item.effect.timeout,
+				timeout_original = item.effect.timeout_original
+			})
+		item.is_obsolete = true
+		item.shape:setData(nil)
+		item.shape:destroy()
+		item.body:destroy()
 
 		-- stabilize ship
-		ship:setSpin(0)
-		ship:setVelocity(0, 0)
-		ship:setAngle(0)
+		ship.body:setSpin(0)
+		ship.body:setVelocity(0, 0)
+		ship.body:setAngle(0)
+
+	elseif counts.ship == 1 then
+		world_camera:setScaleFactor(1, 1)
+		gui_camera:setScaleFactor(1, 1)
+		switch_phase('gameover')
 	end
-
-	if c_item then
-		-- destroy item
-		-- make shape non-colliding until garbage collecter munches it
-		item.shape:setMaskBits(0)
-		item.shape:setData(nil)
-		for j, it in ipairs(stream_items) do
-			if it ~= nil and it == item then
-				table.remove(stream_items, j)
-				break
-			end
-		end
-		-- om nom nom nom
-		--debug("body count before gc:", world:getBodyCount())
-		collectgarbage()
-		--debug("body count after gc:", world:getBodyCount())
-
-	--elseif c_item and c_border then
-	--	item.shape:setMaskBits(0)
-	
-	end
-
 end
+
+
+
+update = makesafe(update_)
+draw = makesafe(draw_)
+mousepressed = makesafe(mousepressed_)
+mousereleased = makesafe(mousereleased_)
+collision = makesafe(collision_)
+
+camera.lateInit()
+

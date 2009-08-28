@@ -107,11 +107,17 @@ function border.class:init()
 		bottom = { x = x0, y = y1 }
 	}
 
+	-- For the first screen, don't shrink the flyable area, so ship
+	-- doesn't start inside a "mountain"
+
+	local max_change_backup = self.max_change
+	self.max_change = 0
 	for x = x0,x1,self.piece_width do
 		local e = self:create_element(prev)
 		table.insert(self.elements, e)
 		prev = e
 	end
+	self.max_change = max_change_backup
 	self.rightmost_idx = #self.elements
 end
 

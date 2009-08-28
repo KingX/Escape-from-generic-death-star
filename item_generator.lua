@@ -105,13 +105,15 @@ item_effects = {
 		message = 'SPEED BLAST',
 		on = function() game_state.speed = game_state.speed * 2 end,
 		off = function() game_state.speed = game_state.speed / 2 end,
-		timeout = 10
+		timeout = 10,
+		color = { 70, 70, 200 }
 	},
 	{
 		message = 'GRAVITY BLAST',
 		on = function() game_state.inverted_controls = not game_state.inverted_controls end,
 		off = function() game_state.inverted_controls = not game_state.inverted_controls end,
-		timeout = 10
+		timeout = 10,
+		color = { 200, 70, 70 }
 	},
 	{
 		message = 'BIG BLAST',
@@ -123,19 +125,21 @@ item_effects = {
 			game_state.ship_size = game_state.ship_size - 1
 			update_ship_shape()
 		end,
-		timeout = 10
+		timeout = 10,
+		color = { 70, 200, 70 }
 	},
 	{
 		message = 'ZOOOOOOM',
 		on = function()
 			local x, y = world_camera:getScaleFactor()
-			world_camera:setScaleFactor(x*2, y*2)
+			world_camera:setScaleFactor(x*1.2, y*1.2)
 		end,
 		off = function()
 			local x, y = world_camera:getScaleFactor()
-			world_camera:setScaleFactor(x/2, y/2)
+			world_camera:setScaleFactor(x/1.2, y/1.2)
 		end,
-		timeout = 10
+		timeout = 10,
+		color = { 150, 150, 150 }
 	}
 }
 

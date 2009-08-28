@@ -180,7 +180,9 @@ function draw_()
 	items:draw()
 
 	if phase == 'running' then
-		if controls.up then
+
+		-- Upwards engine blast
+		if controls.up ~= game_state.inverted_controls then
 			love.graphics.setColorMode(love.color_modulate)
 			love.graphics.setColor(220, 220, 80, 40)
 			love.graphics.circle(love.draw_fill,
@@ -200,6 +202,7 @@ function draw_()
 			)
 		end
 
+		-- Ship
 		love.graphics.setColor(80, 90, 80)
 		love.graphics.polygon(love.draw_fill, ship.shape:getPoints()) 
 		love.graphics.setColor(130, 140, 130)
@@ -214,7 +217,12 @@ function draw_()
 		love.graphics.setFont(fonts.normal)
 		for i, effect in ipairs(game_state.running_effects) do
 			if effect ~= nil then
-				love.graphics.setColor(200, 80, 60)
+				local color = {200, 80, 60}
+				if effect.color ~= nil then
+					color = effect.color
+				end
+				love.graphics.setColorMode(love.color_modulate)
+				love.graphics.setColor(unpack(color))
 				local x = 30
 				local f = 1.0
 				if effect.timeout > (effect.timeout_original - scroll_in_time) then
@@ -225,7 +233,7 @@ function draw_()
 					f = effect.timeout / scroll_out_time
 				end
 				x = (30 - 400) + 400 * f
-				love.graphics.setColor(200 * f, 80 * f, 60 * f)
+				love.graphics.setColor(color[1], color[2], color[3], 255 * f)
 				local m = ''
 				love.graphics.draw(string.format("%04.2f %s%s",effect.timeout, effect.message, m), x, y)
 				y = y + 30
@@ -274,7 +282,8 @@ function apply_effect(effect)
 			message = effect.message,
 			off = effect.off,
 			timeout = effect.timeout,
-			timeout_original = effect.timeout
+			timeout_original = effect.timeout,
+			color = effect.color
 		})
 end
 

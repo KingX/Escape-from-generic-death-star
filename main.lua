@@ -105,17 +105,14 @@ function start_game()
 end
 
 function load()
-	--cam = camera.new()
-
 	math.randomseed(os.time())
 	love.graphics.setCaption("Escape from generic death star")
 
 	fonts = {
-		normal = love.graphics.newFont(love.default_font, 12),
-		big = love.graphics.newFont(love.default_font, 20),
+		small = love.graphics.newFont(love.default_font, 12),
+		normal = love.graphics.newFont(love.default_font, 20),
 		giant = love.graphics.newFont(love.default_font, 96)
 	}
-
 
 	start_game()
 end

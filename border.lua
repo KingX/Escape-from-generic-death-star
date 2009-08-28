@@ -17,11 +17,11 @@ function border.new(d, w, c)
 		max_change = c * config.resolution.y,
 		rightmost_idx = nil,
 		cannon_chance = 0.1,
-		cannon_interval = 1.0
+		cannon_interval = 1.0,
+		cannon_power = 1.0
 	}
 	b.body = love.physics.newBody(world, 0, 0, 0)
 	setmetatable(b, border.class)
-	b:init()
 	return b
 end
 
@@ -34,13 +34,13 @@ function border.class:create_element(prev)
 
 	-- Generate top, constrained by distance to bottom
 	local top_x = prev.top.x + self.piece_width
-	local top_y = bottom_y - math.random(self.min_distance, self.max_distance)
+	local top_y =	bottom_y - math.random(self.min_distance, self.max_distance)
 
 	-- Fix top to obey max_change (overrides distance)
 	if top_y > prev.top.y + self.max_change then
-		top_y = prev.top.y + self.max_change
+		top_y = prev.top.y + self.max_change - math.random(0, self.max_change*0.5)
 	elseif top_y < prev.top.y - self.max_change then
-		top_y = prev.top.y - self.max_change
+		top_y = prev.top.y - self.max_change + math.random(0, self.max_change*0.5)
 	end
 
 	-- Generate shapes
@@ -90,7 +90,8 @@ function border.class:create_element(prev)
 		r.cannon = {
 			x = pos.x, y = pos.y, r = radius,
 			time_since_shot = 0,
-			interval = self.cannon_interval
+			interval = self.cannon_interval,
+			power = self.cannon_power
 		}
 	end
 
@@ -131,7 +132,7 @@ function border.class:update(dt)
 			elem.cannon.time_since_shot = elem.cannon.time_since_shot + dt
 			if elem.cannon.time_since_shot > elem.cannon.interval then
 				local it = items:generate_item_at(elem.cannon.x - l, elem.cannon.y - l)
-				it.body:applyImpulse(-5000000, -5000000)
+				it.body:applyImpulse(elem.cannon.power^2 * -1000000, elem.cannon.power^2 * -1000000)
 				elem.cannon.time_since_shot = 0
 			end
 		end

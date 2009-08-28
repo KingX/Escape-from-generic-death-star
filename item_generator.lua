@@ -10,7 +10,6 @@ function item_generator.new(cpp)
 		size = 10,
 	}
 	setmetatable(g, item_generator.class)
-	g:init()
 	return g
 end
 
@@ -43,7 +42,7 @@ end
 function item_generator.class:generate_item()
 	local x0, y0, x1, y1 = get_visible_area()
 	r = self:generate_item_at(
-		ship.body:getX() + game_state.speed * (x1 - x0),
+		ship.body:getX() + game_state.speed * (x1 - x0) / 250,
 		y0
 	)
 	r.body:applyImpulse(math.random(-10000, -3000), 0)

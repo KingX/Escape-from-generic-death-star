@@ -16,7 +16,6 @@ function background.new(speed)
 		grey_max = 80
 	}
 	setmetatable(bg, background.class)
-	bg:init()
 	return bg
 end
 
@@ -75,7 +74,6 @@ function parallax.new(speed)
 		grey_max = 70
 	}
 	setmetatable(p, parallax.class)
-	p:init()
 	return p
 end
 

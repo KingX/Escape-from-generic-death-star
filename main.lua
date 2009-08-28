@@ -88,19 +88,26 @@ function start_game()
 	gui_camera = camera.new()
 	gui_camera:setScreenOrigin(0, 0)
 
-	-- Set up background
-	
+	-----[[ Initialize various "streams" ]]------
+
 	bg0 = background.new(game_state.speed - 50)
+	bg0:init()
+
 	bg1 = parallax.new(game_state.speed - 100)
+	bg1:init()
 
 	main_border = border.new(
-		0.2, -- min top/bottom distance
+		0.4, -- min top/bottom distance
 		0.1, -- piece width
-		0.05 -- max change in height
+		0.1 -- max change in height
 	)
-	main_border.max_distance = 0.5 * config.resolution.y
+	main_border.max_distance = 0.8 * config.resolution.y
+	main_border.cannon_interval = 0.5
+	main_border.cannon_power = 300
+	main_border:init()
 
-	items = item_generator.new(0.01)
+	items = item_generator.new(0.005)
+	items:init()
 
 end
 

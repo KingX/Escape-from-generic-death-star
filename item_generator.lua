@@ -139,4 +139,12 @@ item_effects = {
 	}
 }
 
+-- Only used for starting period
+invincible = {
+	message = 'Welcome to Escape From Generic Death Star!',
+	on = function() game_state.invincible = true end,
+	off = function() game_state.invincible = false end,
+	timeout = 5
+}
+
 

@@ -54,6 +54,7 @@ function start_game()
 		inverted_controls = false,
 		ship_size = 1,
 		speed = 200,
+		invincible = false,
 		running_effects = {}
 	}
 
@@ -108,6 +109,8 @@ function start_game()
 
 	items = item_generator.new(0.005)
 	items:init()
+
+	apply_effect(invincible)
 
 end
 
@@ -264,6 +267,17 @@ function mousereleased_(x, y, button)
 	if button == config.button_up then controls.up = false end
 end
 
+function apply_effect(effect)
+	effect.on()
+	table.insert(
+		game_state.running_effects, {
+			message = effect.message,
+			off = effect.off,
+			timeout = effect.timeout,
+			timeout_original = effect.timeout
+		})
+end
+
 function collision_(a, b, c)
 	local counts = { ship = 0, border = 0, item = 0 }
 	local item = nil
@@ -282,29 +296,28 @@ function collision_(a, b, c)
 	end
 
 	if counts.ship == 1 and counts.item == 1 then
-		item.effect.timeout_original = item.effect.timeout
-		item.effect.on()
-		table.insert(
-			game_state.running_effects, {
-				message = item.effect.message,
-				off = item.effect.off,
-				timeout = item.effect.timeout,
-				timeout_original = item.effect.timeout_original
-			})
 		item.is_obsolete = true
 		item.shape:setData(nil)
 		item.shape:destroy()
 		item.body:destroy()
+		apply_effect(item.effect)
 
 		-- stabilize ship
 		ship.body:setSpin(0)
 		ship.body:setVelocity(0, 0)
 		ship.body:setAngle(0)
 
-	elseif counts.ship == 1 then
-		world_camera:setScaleFactor(1, 1)
-		gui_camera:setScaleFactor(1, 1)
-		switch_phase('gameover')
+	elseif counts.ship == 1  then
+		if game_state.invincible then
+			-- stabilize ship
+			ship.body:setSpin(0)
+			ship.body:setVelocity(0, 0)
+			ship.body:setAngle(0)
+		else
+			world_camera:setScaleFactor(1, 1)
+			gui_camera:setScaleFactor(1, 1)
+			switch_phase('gameover')
+		end
 	end
 end
 

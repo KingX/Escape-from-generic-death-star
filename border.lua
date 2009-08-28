@@ -29,18 +29,18 @@ end
 	Given a border element 'prev' generate and return an adjacent border element.
 	]]
 function border.class:create_element(prev)
-	local top_x = prev.top.x + self.piece_width
-	local top_y = prev.top.y + math.random(-self.max_change, self.max_change)
-
-	-- Generate bottom, constrained by distance to top
 	local bottom_x = prev.bottom.x + self.piece_width
-	local bottom_y = top_y + math.random(self.min_distance, self.max_distance)
+	local bottom_y = prev.bottom.y + math.random(-self.max_change, self.max_change)
 
-	-- Fix bottom to obey max_change (overrides distance)
-	if bottom_y > prev.bottom.y + self.max_change then
-		bottom_y = prev.bottom.y + self.max_change
-	elseif bottom_y < prev.bottom.y - self.max_change then
-		bottom_y = prev.bottom.y - self.max_change
+	-- Generate top, constrained by distance to bottom
+	local top_x = prev.top.x + self.piece_width
+	local top_y = bottom_y - math.random(self.min_distance, self.max_distance)
+
+	-- Fix top to obey max_change (overrides distance)
+	if top_y > prev.top.y + self.max_change then
+		top_y = prev.top.y + self.max_change
+	elseif top_y < prev.top.y - self.max_change then
+		top_y = prev.top.y - self.max_change
 	end
 
 	-- Generate shapes

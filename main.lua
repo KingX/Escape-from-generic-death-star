@@ -55,6 +55,7 @@ function start_game()
 		ship_size = 1,
 		speed = 200,
 		invincible = false,
+		lives = 3,
 		running_effects = {}
 	}
 
@@ -165,11 +166,14 @@ function update_(dt)
 end
 
 function draw_()
+	-- Set some defaults & shorthands
 	setCamera(world_camera)
+	love.graphics.setColorMode(love.color_modulate)
+	love.graphics.setLineWidth(3)
+	local x0, y0, x1, y1 = get_visible_area()
 	local phase = game_state.phase
 
-	x0, y0, x1, y1 = get_visible_area()
-
+	-- The very background
 	love.graphics.setColor(90, 90, 90)
 	love.graphics.rectangle(love.draw_fill, x0, y0, x1-x0, y1-y0)
 
@@ -183,7 +187,6 @@ function draw_()
 
 		-- Upwards engine blast
 		if controls.up ~= game_state.inverted_controls then
-			love.graphics.setColorMode(love.color_modulate)
 			love.graphics.setColor(220, 220, 80, 40)
 			love.graphics.circle(love.draw_fill,
 				ship.body:getX() + game_state.ship_size * 20,
@@ -203,14 +206,39 @@ function draw_()
 		end
 
 		-- Ship
-		love.graphics.setColor(80, 90, 80)
+		local tr
+		if game_state.invincible then tr = 100
+		else tr = 255 end
+		love.graphics.setColor(80, 90, 80, tr)
 		love.graphics.polygon(love.draw_fill, ship.shape:getPoints()) 
 		love.graphics.setColor(130, 140, 130)
 		love.graphics.setLineWidth(3)
 		love.graphics.polygon(love.draw_line, ship.shape:getPoints()) 
 
-		-- Running effects
+
+		---[[ GUI STUFF ]]---
+
 		setCamera(gui_camera)
+
+		-- Life counter
+		function draw_mini_ship(x, y)
+			local ps = {ship.shape:getPoints()}
+			for i = 1, #ps, 2 do
+				ps[i] = (ps[i] - ship.body:getX()) / (game_state.ship_size * 2) + x
+				ps[i+1] = (ps[i+1] - ship.body:getY()) / (game_state.ship_size * 2) + y
+			end
+			love.graphics.setColor(80, 90, 80, tr)
+			love.graphics.polygon(love.draw_fill, unpack(ps))
+			love.graphics.setLineWidth(1)
+			love.graphics.setColor(130, 140, 130)
+			love.graphics.polygon(love.draw_line, unpack(ps))
+		end
+
+		for l = 1,game_state.lives do
+			draw_mini_ship(790 - l * 30, 30)
+		end
+
+		-- Running effects
 		local y = 30
 		local scroll_in_time = 0.5
 		local scroll_out_time = 0.5
@@ -236,10 +264,15 @@ function draw_()
 				x = (30 - 400) + 400 * f
 				love.graphics.setColor(color[1], color[2], color[3], 50 + 205 * rt)
 				local m = ''
-				love.graphics.draw(string.format("%04.2f %s%s",effect.timeout, effect.message, m), x, y)
+				if effect.show_timeout == nil or effect.show_timeout == true then
+					love.graphics.draw(string.format("%04.2f %s%s",effect.timeout, effect.message, m), x, y)
+				else
+					love.graphics.draw(string.format("       %s%s",effect.message, m), x, y)
+				end
 				y = y + 30
 			end
 		end
+
 		setCamera(world_camera)
 
 	end
@@ -278,25 +311,28 @@ end
 
 function apply_effect(effect)
 	effect.on()
-	table.insert(
-		game_state.running_effects, {
-			message = effect.message,
-			off = effect.off,
-			timeout = effect.timeout,
-			timeout_original = effect.timeout,
-			color = effect.color
-		})
+	-- Copy effect (so it can be there multiple times with different timeout
+	-- values etc...
+	local eff = {}
+	for k, v in pairs(effect) do
+		eff[k] = v
+	end
+	eff.timeout_original = eff.timeout
+	table.insert(game_state.running_effects, eff)
 end
 
 function collision_(a, b, c)
 	local counts = { ship = 0, border = 0, item = 0 }
 	local item = nil
+	local border = nil
 
 	for i, x in ipairs({a, b}) do
 		if x ~= nil then
 			counts[x.type] = counts[x.type] + 1
 			if x.type == 'item' then
 				item = x
+			elseif x.type == 'border' then
+				border = x
 			end
 		end
 	end
@@ -318,15 +354,30 @@ function collision_(a, b, c)
 		ship.body:setAngle(0)
 
 	elseif counts.ship == 1  then
-		if game_state.invincible then
-			-- stabilize ship
-			ship.body:setSpin(0)
-			ship.body:setVelocity(0, 0)
-			ship.body:setAngle(0)
-		else
+		if not game_state.invincible then
+			game_state.lives = game_state.lives - 1
+		end
+		if game_state.lives < 1 then
+			-- Game over!
 			world_camera:setScaleFactor(1, 1)
 			gui_camera:setScaleFactor(1, 1)
 			switch_phase('gameover')
+		else
+			-- set back ship to safe position & stabilize
+			ship.body:setPosition(
+				border.top.x,
+				(border.top.y + border.bottom.y) / 2
+			)
+			ship.body:setSpin(0)
+			ship.body:setVelocity(0, 0)
+			ship.body:setAngle(0)
+			if not game_state.invincible then
+				for i, effect in ipairs(game_state.running_effects) do
+					effect.off()
+				end
+				game_state.running_effects = {}
+				apply_effect(invincible)
+			end
 		end
 	end
 end

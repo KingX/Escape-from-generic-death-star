@@ -101,7 +101,6 @@ function item_generator.class:draw()
 end
 
 item_effects = {
-	--[[
 	{
 		message = 'SPEED BLAST',
 		on = function() game_state.speed = game_state.speed * 2 end,
@@ -133,11 +132,11 @@ item_effects = {
 		message = 'ZOOOOOOM',
 		on = function()
 			local x, y = world_camera:getScaleFactor()
-			world_camera:setScaleFactor(x*1.2, y*1.2)
+			world_camera:setScaleFactor(x*1.5, y*1.5)
 		end,
 		off = function()
 			local x, y = world_camera:getScaleFactor()
-			world_camera:setScaleFactor(x/1.2, y/1.2)
+			world_camera:setScaleFactor(x/1.5, y/1.5)
 		end,
 		timeout = 10,
 		color = { 150, 150, 150 }
@@ -155,7 +154,6 @@ item_effects = {
 		timeout = 10,
 		color = { 200, 190, 80 }
 	},
-	]]--
 	{
 		message = 'REVERSE',
 		on = function()
@@ -168,12 +166,22 @@ item_effects = {
 		end,
 		timeout = 10,
 		color = { 200, 90, 200 }
+	},
+	{
+		message = '+1 LIFE',
+		on = function()
+			game_state.lives = game_state.lives + 1
+		end,
+		off = function() end,
+		timeout = 3,
+		show_timeout = false,
+		color = { 255, 180, 120 }
 	}
 }
 
 -- Only used for starting period
 invincible = {
-	message = 'Welcome to Escape From Generic Death Star!',
+	message = 'Invincible',
 	on = function() game_state.invincible = true end,
 	off = function() game_state.invincible = false end,
 	timeout = 5

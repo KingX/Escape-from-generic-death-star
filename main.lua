@@ -99,12 +99,12 @@ function start_game()
 	bg1:init()
 
 	main_border = border.new(
-		0.4, -- min top/bottom distance
+		0.6, -- min top/bottom distance
 		0.1, -- piece width
 		0.1 -- max change in height
 	)
-	main_border.max_distance = 0.8 * config.resolution.y
-	main_border.cannon_interval = 0.5
+	main_border.max_distance = 1.5 * config.resolution.y
+	main_border.cannon_interval = 1.0
 	main_border.cannon_power = 300
 	main_border:init()
 
